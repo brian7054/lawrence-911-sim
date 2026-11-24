@@ -509,6 +509,9 @@ const SC=[
 ];
 
 /* =================== UNITS =================== */
+// EMS station positions (Rock Hill placed near Pedro, where the Rock Hill community/schools are)
+const EMS_ST={1:{n:'Ironton',zk:'IRON',lat:38.537,lon:-82.683},2:{n:'South Point',zk:'SPT',lat:38.418,lon:-82.586},3:{n:'Chesapeake',zk:'CHES',lat:38.428,lon:-82.457},
+ 4:{n:'Proctorville',zk:'PROC',lat:38.437,lon:-82.377},5:{n:'Windsor',zk:'WIND',lat:38.565,lon:-82.400},6:{n:'Rock Hill',zk:'ELIZ',lat:38.650,lon:-82.625}};
 function mkUnits(){
   const U=[];
   const add=(id,type,ag,home,tg,extra={})=>U.push(Object.assign({id,type,ag,home,tg,st:'AV',inc:null,next:0,pos:{lat:Z[home].lat+rnd(-.01,.01),lon:Z[home].lon+rnd(-.01,.01)}},extra));
@@ -524,14 +527,14 @@ function mkUnits(){
   add('751','LE','Athalia PD','ATH','SO44DSP',{agency:'APD'});
   add('OSHP-1','LE','Ohio State Hwy Patrol','COAL','XSO-44',{agency:'OSHP'});
   add('OSHP-2','LE','Ohio State Hwy Patrol','CHES','XSO-44',{agency:'OSHP'});
-  add('EMS 91','EMS','Lawrence Co. EMS · Countywide supervisor','COAL','EMS44DSP',{sup:true});
+  add('91','EMS','Lawrence Co. EMS · Countywide supervisor','COAL','EMS44DSP',{sup:true});
   // Fire — one engine per department (+ Ironton truck)
   const fdHome={'100':'AID','200':'BURL','300':'CHES','400':'COAL','500':'DEC','600':'ELIZ','700':'BURL','800':'HAM','900':'IRON','1100':'LAWT','1200':'PROC','1300':'ROME','1400':'SPT','1500':'UPPER','1600':'WIND','1700':'WASH','2100':'PERRY'};
   Object.keys(fdHome).forEach(n=>add('E-'+n,'FIRE',FDN[n],fdHome[n],n==='900'?'IRON FIRE':'FD44DISP',{fd:n,vol:n!=='900'}));
   add('L-900','FIRE',FDN['900'],'IRON','IRON FIRE',{fd:'900',vol:false});
   // EMS
-  // Station 1 = Medic 11/12, Station 2 = Medic 21, then 31-61. Station locations other than Coal Grove HQ are placeholders.
-  [['Medic 11','COAL','Station 1'],['Medic 12','COAL','Station 1'],['Medic 21','IRON','Station 2'],['Medic 31','SPT','Station 3'],['Medic 41','CHES','Station 4'],['Medic 51','PROC','Station 5'],['Medic 61','LAWT','Station 6']].forEach(([i,h,st])=>add(i,'EMS','Lawrence Co. EMS · '+st,h,'EMS44DSP'));
+  // Lawrence Co. EMS stations: 1 Ironton (Medic 11, 12), 2 South Point (21), 3 Chesapeake (31), 4 Proctorville (41), 5 Windsor (51), 6 Rock Hill (61)
+  [['Medic 11',1],['Medic 12',1],['Medic 21',2],['Medic 31',3],['Medic 41',4],['Medic 51',5],['Medic 61',6]].forEach(([i,n])=>{add(i,'EMS','Lawrence Co. EMS · Station '+n+' '+EMS_ST[n].n,EMS_ST[n].zk,'EMS44DSP',{stn:n});const u=U[U.length-1];u.pos={lat:EMS_ST[n].lat+rnd(-.002,.002),lon:EMS_ST[n].lon+rnd(-.002,.002)}});
   return U;
 }
 
@@ -1102,6 +1105,7 @@ const CMDS=[
  ['QW','QW <LAST,FIRST,MMDDYYYY> — LEADS person/warrant query'],
  ['QR','QR <LAST,FIRST,MMDDYYYY> C — criminal history (purpose code)'],
  ['L','L — switch to LEADS · I — switch to incidents'],
+ ['MU','MU <unit> <station#> — move a medic up to cover a station'],
  ['HELP','HELP — list commands']];
 function cmdHint(){const v=$('#cmd').value.trim().toUpperCase();const w=v.split(/\s+/)[0];
   const m=CMDS.filter(c=>!w||c[0].startsWith(w)||w.startsWith(c[0]));
@@ -1133,6 +1137,8 @@ function runCmd(){
   if(c==='REC'){const inc=args[0]?findInc(args[0]):newest();if(!inc)return say2('NO INCIDENT');openAssign(inc.id);return say2('REC #'+inc.id+': '+(recommend(inc).join(', ')||'NONE'))}
   if(c==='CL'){const inc=findInc(args[0]||'');if(!inc)return say2('NO INCIDENT');closeInc(inc.id);return say2('CLOSE #'+inc.id)}
   if(c==='NOTE'){const inc=findInc(args[0]||'');if(!inc)return say2('NO INCIDENT');inc.notes+=`\n[${fmt(S.t)}] `+raw.split(/\s+/).slice(2).join(' ');return say2('NOTE ADDED #'+inc.id)}
+  if(c==='MU'){const toks=raw.split(/\s+/).slice(1);const n=+toks.pop();const t=toks.join(' ').toUpperCase();const u=S.units.find(x=>x.id.toUpperCase()===t);
+    if(!u||u.type!=='EMS'||!EMS_ST[n])return say2('MU <MEDIC ##> <STATION 1-6>');moveUp(u.id,n);return say2(`MOVE-UP ${u.id} TO STN ${n}`)}
   if(c==='ST'){const t=raw.split(/\s+/).slice(1).join(' ').toUpperCase();const u=S.units.find(x=>x.id.toUpperCase()===t);if(!u)return say2('UNKNOWN UNIT');return say2(`${u.id} ${u.st} ${u.inc?'#'+u.inc:''} ${u.ag}`)}
   if(c==='RQ'){if(!args[0])return say2('RQ <PLATE>');setCadView('leads');$('#lType').value='veh';lFields();$('#lPlate').value=args[0];$('#lState').value=['OH','KY','WV'].includes(args[1])?args[1]:'OH';leadsTx();return say2('RQ/QV SENT')}
   if(c==='QW'||c==='QR'){const f=raw.slice(c.length).trim().split(/[,\s]+/);if(f.length<3)return say2(c+' LAST,FIRST,MMDDYYYY');
@@ -1176,6 +1182,7 @@ function tick(){
   S.radio.forEach(m=>{if(m.lq&&!m.relayed&&!m.lqPen&&S.t-m.t>90){m.lqPen=true;pts(-5,`${m.from} still waiting on a LEADS return`)}
     if(m.awaitConf&&!m.confRelayed&&!m.confPen&&S.t-m.awaitConf>150){m.confPen=true;pts(-6,'Hit never confirmed/relayed to the officer')}});
   // self-initiated
+  if(Math.floor(S.t/5)!==Math.floor((S.t-dt)/5))coverageTick();
   if(S.t>=S.nextSelf){selfInit();S.nextSelf=S.t+rnd(90,170)*(S.diff==='hard'?.7:1)}
   if(!S.emergDone&&S.t>=S.nextEmerg){if(!emergencyAlert())S.nextEmerg=S.t+30}
   if(S.t>=S.len){endShift();return}
@@ -1207,7 +1214,46 @@ function unitTick(u){
   }else if(u.st==='TR'){u.st='AH';if(u.hp)u.pos={lat:u.hp.lat,lon:u.hp.lon};delete u.mv;u.next=S.t+ri(30,60);radioIn(u,`${u.id} at destination.`)}
   else if(u.st==='AH'){u.st='AV';u.inc=null;goHome(u);radioIn(u,`${u.id} back in service.`);maybeClose(inc)}
 }
-function goHome(u){const h=Z[u.home];u.mv={a:{...u.pos},b:{lat:h.lat+rnd(-.008,.008),lon:h.lon+rnd(-.008,.008)},t0:S.t,t1:S.t+eta(u,h)*1.2}}
+/* ---- EMS area coverage (move-ups) ---- */
+const medics=()=>S.units.filter(u=>u.type==='EMS'&&!u.sup);
+function covering(n){return medics().filter(u=>u.st==='AV'&&(u.cover===n||(!u.cover&&u.stn===n)))}
+function gaps(){return Object.keys(EMS_ST).map(Number).filter(n=>!covering(n).length)}
+function moveCandidates(n){
+  const st=EMS_ST[n];const av=medics().filter(u=>u.st==='AV');
+  const spare=av.filter(u=>u.cover||covering(u.stn).length>1);
+  const list=(spare.length?spare:av).sort((a,b)=>dist(a.pos,st)-dist(b.pos,st));
+  return list;
+}
+function moveUp(id,n){
+  const u=S.units.find(x=>x.id===id);if(!u||u.st!=='AV'){note(id+' is not available');return}
+  const leaves=!u.cover&&covering(u.stn).length===1;
+  u.cover=n===u.stn?null:n;goHome(u);
+  radioOut('EMS44DSP',`${u.id}, Dispatch. Move up and cover Station ${n}, ${EMS_ST[n].n}.`);
+  setTimeout(()=>{if(S.running)radioIn(u,`${u.id} en route to cover Station ${n}.`)},2500);
+  if(S.gapSince&&S.gapSince[n]!=null){pts(leaves?3:8,`Move-up: ${u.id} covering Station ${n}`)}
+  S.radio.forEach(m=>{if(m.gap===n){m.need=false;m.actions=[]}});render();
+}
+function returnQ(id){const u=S.units.find(x=>x.id===id);if(!u||!u.cover)return;u.cover=null;if(u.st==='AV')goHome(u);
+  radioOut('EMS44DSP',`${u.id}, Dispatch. Return to quarters, Station ${u.stn}.`);pts(2,`${u.id} released from coverage`);render()}
+function coverageTick(){
+  S.gapSince=S.gapSince||{};const g=gaps();
+  Object.keys(S.gapSince).forEach(k=>{if(!g.includes(+k))delete S.gapSince[k]});
+  g.forEach(n=>{
+    if(S.gapSince[n]==null){S.gapSince[n]=S.t;
+      const c=moveCandidates(n)[0];
+      if(c&&g.length>=1&&medics().filter(u=>u.st!=='AV').length>=2)
+        radioIn(null,`CAD: No medic available for Station ${n} (${EMS_ST[n].n}) area. Suggest moving ${c.id} up to cover.`,{from:'CAD',tg:'EMS44DSP',gap:n,due:S.t+40,
+          actions:[{k:'mu',l:`Move ${c.id} up to Station ${n}`,fn:()=>moveUp(c.id,n)}]});
+    }else if(S.t-S.gapSince[n]>150&&!S.gapPen?.[n]&&moveCandidates(n).some(u=>u.cover||covering(u.stn).length>1)){
+      S.gapPen=S.gapPen||{};S.gapPen[n]=true;pts(-4,`Station ${n} (${EMS_ST[n].n}) area left uncovered`)}
+  });
+  if(!g.length)S.gapPen={};
+  // covering units whose home station has its own unit back
+  medics().filter(u=>u.cover&&u.st==='AV'&&!u.relPrompt&&covering(u.cover).length>1).forEach(u=>{u.relPrompt=true;
+    radioIn(null,`CAD: Station ${u.cover} has its own medic back. ${u.id} can return to quarters (Station ${u.stn}).`,{from:'CAD',tg:'EMS44DSP',due:S.t+60,
+      actions:[{k:'rq',l:`Return ${u.id} to quarters`,fn:()=>{u.relPrompt=false;returnQ(u.id)}}]})});
+}
+function goHome(u){const h=u.cover?EMS_ST[u.cover]:u.stn?EMS_ST[u.stn]:Z[u.home];u.mv={a:{...u.pos},b:{lat:h.lat+rnd(-.008,.008),lon:h.lon+rnd(-.008,.008)},t0:S.t,t1:S.t+eta(u,h)*1.2}}
 function maybeClose(inc){if(!inc)return;if(inc.units.every(id=>{const u=S.units.find(x=>x.id===id);return u.inc!==inc.id})){inc.status='closed';inc.closedAt=S.t}}
 
 /* =================== RENDER =================== */
@@ -1288,10 +1334,19 @@ function renderRadio(){
   const sel=$('#pttUnit');const cur=sel.value;
   sel.innerHTML=S.units.filter(u=>u.type==='LE').map(u=>`<option ${u.id===cur?'selected':''}>${u.id}</option>`).join('');
 }
+function coverageHTML(){
+  const g=gaps();
+  return `<div class="ugh">EMS coverage</div><div class="ugrid">${Object.entries(EMS_ST).map(([n,st])=>{n=+n;const cv=covering(n);
+    const own=cv.filter(u=>u.stn===n&&!u.cover),mu=cv.filter(u=>u.cover===n);
+    const c=g.includes(n)?moveCandidates(n)[0]:null;
+    return `<div class="ucard" style="border-color:${cv.length?'#065f46':'#991b1b'}"><b>Stn ${n} ${st.n}</b><div class="ag ${cv.length?'AV':'OS'}">${cv.length?cv.map(u=>u.id+(u.cover?' (cover)':'')).join(', '):'UNCOVERED'}</div>
+      ${c?`<button class="warn" style="padding:2px 6px;font-size:11px;margin-top:3px" onclick="moveUp('${c.id}',${n})">Move up ${c.id}</button>`:''}
+      ${mu.filter(u=>covering(n).length>1).map(u=>`<button style="padding:2px 6px;font-size:11px;margin-top:3px" onclick="returnQ('${u.id}')">Return ${u.id}</button>`).join('')}</div>`}).join('')}</div>`;
+}
 function renderUnits(){
   const g=t=>S.units.filter(u=>u.type===t).map(u=>{const inc=u.inc?S.incidents.find(i=>i.id===u.inc):null;
-    return `<div class="ucard" title="${esc(u.ag)}"><b class="${u.st}">${u.id}</b> <span class="${u.st}">${u.st}</span><div class="ag">${esc(u.ag)}</div><div class="ag">${inc?'#'+inc.id+' '+inc.nat:Z[u.home].n}</div></div>`}).join('');
-  setHTML($('#units'),`<div class="mono" style="font-size:11px;margin-bottom:4px">${(()=>{const n=nuaList();return n.length?`<span style="color:var(--amber)">NUA (no unit available): ${n.join(', ')}</span> <span class="dim">— send deputies</span>`:'<span class="dim">All village/city PDs have a unit on</span>'})()}</div><div class="dim mono" style="font-size:10.5px">OFF off duty · AV available · DP dispatched · ER en route · OS on scene · TR transporting · AH at hospital</div><div class="ugh">Law</div><div class="ugrid">${g('LE')}</div><div class="ugh">Fire</div><div class="ugrid">${g('FIRE')}</div><div class="ugh">EMS</div><div class="ugrid">${g('EMS')}</div>`);
+    return `<div class="ucard" title="${esc(u.ag)}"><b class="${u.st}">${u.id}</b> <span class="${u.st}">${u.st}</span><div class="ag">${esc(u.ag)}</div><div class="ag">${inc?'#'+inc.id+' '+inc.nat:u.cover?'Covering Stn '+u.cover:u.stn?'Stn '+u.stn+' '+EMS_ST[u.stn].n:Z[u.home].n}</div></div>`}).join('');
+  setHTML($('#units'),`<div class="mono" style="font-size:11px;margin-bottom:4px">${(()=>{const n=nuaList();return n.length?`<span style="color:var(--amber)">NUA (no unit available): ${n.join(', ')}</span> <span class="dim">— send deputies</span>`:'<span class="dim">All village/city PDs have a unit on</span>'})()}</div><div class="dim mono" style="font-size:10.5px">OFF off duty · AV available · DP dispatched · ER en route · OS on scene · TR transporting · AH at hospital</div><div class="ugh">Law</div><div class="ugrid">${g('LE')}</div><div class="ugh">Fire</div><div class="ugrid">${g('FIRE')}</div><div class="ugh">EMS</div><div class="ugrid">${g('EMS')}</div>${coverageHTML()}`);
 }
 /* =================== CAD MAP =================== */
 // Schematic vector map (no map tiles can load here). Road and hospital positions are approximate.
