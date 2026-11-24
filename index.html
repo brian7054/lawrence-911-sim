@@ -1,0 +1,1540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Lawrence County 911 Dispatch Simulator</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121922;--panel2:#18212c;--line:#263241;--txt:#d7e1ea;--dim:#7d8b99;--amber:#ffb020;--green:#34d399;--red:#ff4d4f;--blue:#4ea8ff;--purple:#b48cff;--cyan:#22d3ee;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);font:14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:7px 10px;cursor:pointer}
+button:hover{border-color:#3b4b5e}
+button:disabled{opacity:.4;cursor:default}
+button.pri{background:#1d4ed8;border-color:#2563eb}
+button.go{background:#065f46;border-color:#059669}
+button.warn{background:#7c2d12;border-color:#c2410c}
+button.bad{background:#7f1d1d;border-color:#dc2626}
+select,input,textarea{font:inherit;color:var(--txt);background:#0d141c;border:1px solid var(--line);border-radius:6px;padding:7px;width:100%}
+textarea{font-family:var(--mono);font-size:12px}
+.mono{font-family:var(--mono)}
+.dim{color:var(--dim)}
+.hidden{display:none!important}
+/* Start */
+#start{max-width:760px;margin:0 auto;padding:22px 16px 60px}
+#start h1{font-size:24px;margin:6px 0 2px;letter-spacing:.5px}
+#start .badge{display:inline-block;font-family:var(--mono);font-size:11px;color:var(--amber);border:1px solid #6b4b0c;padding:2px 8px;border-radius:20px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin:12px 0}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row>*{flex:1;min-width:140px}
+label.f{display:block;font-size:12px;color:var(--dim);margin-bottom:4px}
+#start ul{margin:6px 0;padding-left:20px}
+#start li{margin:4px 0}
+/* App */
+#app{display:flex;flex-direction:column;height:100vh;height:100dvh}
+header{display:flex;align-items:center;gap:12px;padding:6px 10px;background:#070a0e;border-bottom:1px solid var(--line);flex-wrap:wrap}
+header .brand{font-weight:700;letter-spacing:.5px;font-size:13px}
+header .brand small{display:block;color:var(--dim);font-weight:400;font-size:10px;font-family:var(--mono)}
+.stat{font-family:var(--mono);font-size:12px;background:var(--panel);border:1px solid var(--line);padding:4px 8px;border-radius:6px}
+.stat b{color:var(--amber)}
+header .sp{flex:1}
+main{flex:1;display:grid;grid-template-columns:340px 1fr 360px;grid-template-rows:1fr 290px;gap:6px;padding:6px;min-height:0}
+.pnl{background:var(--panel);border:1px solid var(--line);border-radius:8px;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.pnl>h2{margin:0;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);padding:7px 10px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;background:#0f151d}
+.pnl>h2 .sp{flex:1}
+.body{flex:1;overflow:auto;padding:8px}
+#pPhone{grid-row:1/3}
+#pCad{grid-column:2}
+#pRadio{grid-column:3;grid-row:1/3}
+#pBottom{grid-column:2;display:grid;grid-template-columns:1fr 400px;gap:6px;background:none;border:0}
+nav#tabs{display:none}
+/* Phones */
+.lines{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+.ln{border:1px solid var(--line);border-radius:8px;padding:7px;background:#0d141c;font-size:12px;min-height:58px;position:relative}
+.ln .t{font-family:var(--mono);font-size:11px;color:var(--dim)}
+.ln.ring{border-color:var(--red);animation:flash 1s infinite}
+.ln.active{border-color:var(--green);background:#08231a}
+.ln.hold{border-color:var(--amber)}
+.ln.ab{border-color:var(--purple)}
+@keyframes flash{50%{background:#3a0d0f}}
+.ln button{margin-top:4px;padding:4px 8px;font-size:12px;width:100%}
+.ali{font-family:var(--mono);font-size:11.5px;background:#050a0f;border:1px solid #1e3a2a;color:#86efac;border-radius:6px;padding:7px;margin-bottom:8px;white-space:pre-wrap}
+.tx{background:#0a1017;border:1px solid var(--line);border-radius:6px;padding:8px;height:200px;overflow:auto;margin-bottom:8px;font-size:13px}
+.tx div{margin:4px 0}
+.tx .you{color:var(--blue)}
+.tx .caller{color:#fde68a}
+.tx .sys{color:var(--dim);font-style:italic;font-size:12px}
+.qs{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:6px}
+.qs button{font-size:12px;padding:6px;text-align:left}
+.qs button.asked{opacity:.45}
+.qs button.special{border-color:#7c3aed;background:#2e1065}
+.acts{display:flex;gap:5px;flex-wrap:wrap}
+.acts>*{flex:1}
+.notes{font-family:var(--mono);font-size:11.5px;background:#0a1017;border:1px dashed var(--line);border-radius:6px;padding:6px;margin:6px 0;white-space:pre-wrap;color:#cbd5e1}
+/* CAD */
+table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
+th{text-align:left;color:var(--dim);font-weight:400;font-size:10.5px;letter-spacing:1px;border-bottom:1px solid var(--line);padding:4px 5px;position:sticky;top:0;background:var(--panel)}
+td{padding:5px;border-bottom:1px solid #1a2431;vertical-align:top}
+tr.p1 td:first-child{border-left:3px solid var(--red)}
+tr.p2 td:first-child{border-left:3px solid var(--amber)}
+tr.p3 td:first-child{border-left:3px solid var(--blue)}
+tr.pend td{background:#2a1508}
+tr.closed td{opacity:.45}
+td button{padding:3px 7px;font-size:11px;margin:1px}
+.ub{display:inline-block;font-size:10.5px;padding:1px 5px;border-radius:4px;margin:1px;border:1px solid var(--line)}
+/* status colors */
+.AV{color:var(--green)}.DP{color:var(--amber)}.ER{color:#facc15}.OS{color:var(--red)}.TR{color:var(--purple)}.AH{color:var(--cyan)}.OOS{color:var(--dim)}.OFF{color:#56606b}.ub.OFF{opacity:.6}
+.ub.AV{border-color:#065f46}.ub.DP,.ub.ER{border-color:#854d0e}.ub.OS{border-color:#991b1b}.ub.TR,.ub.AH{border-color:#5b21b6}
+/* units board */
+.ugrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px}
+.ucard{font-family:var(--mono);font-size:11px;background:#0d141c;border:1px solid var(--line);border-radius:6px;padding:5px 6px;cursor:pointer}
+.ucard b{font-size:12px}
+.ucard .ag{color:var(--dim);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ugh{font-size:10px;letter-spacing:1.5px;color:var(--dim);margin:8px 0 4px;text-transform:uppercase}
+/* radio */
+.tgs{display:flex;gap:4px;flex-wrap:wrap;padding:6px 8px;border-bottom:1px solid var(--line)}
+.tgs button{font-family:var(--mono);font-size:10.5px;padding:3px 6px}
+.tgs button.on{background:#1e3a5f;border-color:var(--blue)}
+.rmsg{border:1px solid var(--line);border-left:3px solid var(--line);border-radius:6px;padding:6px 7px;margin-bottom:6px;background:#0d141c;font-size:12.5px}
+.rmsg .h{font-family:var(--mono);font-size:10.5px;color:var(--dim);display:flex;gap:6px}
+.rmsg .h .tg{color:var(--cyan)}
+.rmsg.need{border-left-color:var(--amber);background:#1d1608}
+.rmsg.emerg{border-left-color:var(--red);background:#3a0d0f;animation:flash 0.6s infinite}
+.rmsg.out{border-left-color:var(--blue);background:#0b1627}
+.rmsg .a{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px}
+.rmsg .a button{font-size:11.5px;padding:4px 8px}
+.ptt{padding:8px;border-top:1px solid var(--line);display:flex;gap:6px}
+/* map */
+#map svg{width:100%;height:100%}
+#map{padding:0}
+/* modal */
+#modal{position:fixed;inset:0;background:#000a;display:flex;align-items:center;justify-content:center;z-index:50;padding:10px}
+#modal .box{background:var(--panel);border:1px solid var(--line);border-radius:10px;width:min(620px,100%);max-height:92vh;overflow:auto;padding:14px}
+#modal h3{margin:0 0 10px;font-size:15px}
+.chk{display:flex;align-items:center;gap:8px;padding:5px 6px;border-bottom:1px solid #1a2431;font-family:var(--mono);font-size:12px}
+.chk input{width:auto}
+.chk.rec{background:#0a2a1d}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:70px;z-index:70;display:flex;flex-direction:column;gap:4px;align-items:center;pointer-events:none}
+#toast div{background:#111827;border:1px solid var(--line);padding:6px 12px;border-radius:20px;font-size:12.5px;box-shadow:0 4px 16px #0008}
+#toast .plus{border-color:#059669;color:#6ee7b7}
+#toast .minus{border-color:#dc2626;color:#fca5a5}
+/* report */
+#report{max-width:760px;margin:0 auto;padding:20px 16px 60px}
+.grade{font-size:64px;font-weight:800;color:var(--amber);line-height:1}
+.kv{display:grid;grid-template-columns:1fr auto;gap:4px 14px;font-family:var(--mono);font-size:13px}
+.kv div:nth-child(even){text-align:right;color:var(--amber)}
+.ev{font-family:var(--mono);font-size:12px;max-height:300px;overflow:auto;background:#0a1017;padding:8px;border-radius:6px}
+.ev .p{color:#6ee7b7}.ev .m{color:#fca5a5}
+/* CAD command line + LEADS */
+.vt{padding:2px 8px;font-size:11px;letter-spacing:0;text-transform:none}
+.vt.on{background:#1e3a5f;border-color:var(--blue);color:#fff}
+.cmdbar{display:flex;gap:6px;align-items:center;padding:6px 8px 2px;background:#050a0f;border-bottom:1px solid #12202c}
+.cmdbar input{font-family:var(--mono);font-size:14px;background:#000;color:#86efac;border-color:#14532d;text-transform:uppercase}
+.cmdhint{font-size:10.5px;color:#4ade80;opacity:.75;padding:2px 10px 0;background:#050a0f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cmdlog{margin:0;padding:2px 10px 5px;font-size:10.5px;color:#7dd3a0;background:#050a0f;border-bottom:1px solid var(--line);max-height:46px;overflow:hidden;white-space:pre-wrap}
+.cmdlog:empty{display:none}
+.lform{background:#06110b;border:1px solid #14532d;border-radius:8px;padding:8px}
+#leads input,#leads select{font-family:var(--mono);background:#000;color:#86efac;border-color:#14532d}
+#lOut{margin-top:8px}
+.lent{background:#000;border:1px solid #14532d;border-radius:6px;padding:6px 8px;margin-bottom:6px}
+.lent .lh{font-family:var(--mono);font-size:11px;color:#4ade80;opacity:.8}
+.lent pre{margin:4px 0;font-family:var(--mono);font-size:12px;color:#86efac;white-space:pre-wrap;word-break:break-word}
+.lent pre.hit{color:#fca5a5}
+.lent button{font-size:11.5px;padding:4px 8px}
+/* maps */
+.mapbody{padding:0!important;position:relative}
+.mapwrap{position:relative;width:100%;height:100%;min-height:200px;overflow:hidden;touch-action:none}
+.mapwrap svg{position:absolute;inset:0;width:100%;height:100%;cursor:grab}
+.mapctl{position:absolute;top:6px;right:6px;display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;max-width:70%}
+.mapctl button{padding:3px 9px;font-weight:700;background:#0f172acc}
+.mapctl label{font-size:11px;background:#0f172acc;border:1px solid var(--line);border-radius:6px;padding:3px 6px;display:flex;align-items:center;gap:4px}
+.mapctl input{width:auto}
+.mapleg{position:absolute;left:6px;bottom:6px;font-size:10.5px;background:#0f172acc;padding:3px 6px;border-radius:6px}
+#cad.mapmode{padding:0;overflow:hidden}
+#cadMap{height:100%;min-height:380px}
+#pBigMap{display:none}
+/* layouts for multi-monitor */
+#app main:not(.lay-all){display:grid!important;grid-template-rows:minmax(0,1fr)!important;grid-template-columns:minmax(0,1fr)!important}
+#app main:not(.lay-all)>*{display:none!important;grid-row:auto!important;grid-column:auto!important;height:auto}
+main.lay-phones>#pPhone,main.lay-pc>#pPhone,main.lay-cad>#pCad,main.lay-leads>#pCad,main.lay-pc>#pCad,main.lay-cr>#pCad,main.lay-radio>#pRadio,main.lay-cr>#pRadio,main.lay-map>#pBigMap{display:flex!important}
+main.lay-units>#pBottom{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}
+#app main.lay-pc{grid-template-columns:minmax(320px,400px) minmax(0,1fr)!important}
+#app main.lay-cr{grid-template-columns:minmax(0,1fr) minmax(320px,420px)!important}
+body.solo nav#tabs{display:none!important}
+@media (max-width:980px){#app main.lay-pc,#app main.lay-cr,main.lay-units>#pBottom{grid-template-columns:minmax(0,1fr)!important;grid-auto-rows:minmax(0,1fr)}}
+/* Mobile */
+@media (max-width:980px){
+  main{display:block;padding:6px;overflow:hidden}
+  .pnl{height:100%}
+  main>.pnl,main>#pBottom{display:none}
+  main>.pnl.show{display:flex}
+  main>#pBottom.show{display:flex;flex-direction:column;height:100%;gap:6px}
+  #pBottom>.pnl{flex:1}
+  #pBottom #pMap{flex:0 0 260px}
+  nav#tabs{display:flex;border-top:1px solid var(--line);background:#070a0e}
+  nav#tabs button{flex:1;border:0;border-radius:0;background:none;padding:10px 2px;font-size:11.5px;position:relative}
+  nav#tabs button.on{color:var(--amber);background:#111821}
+  nav#tabs .dot{position:absolute;top:5px;right:calc(50% - 22px);background:var(--red);color:#fff;font-size:10px;border-radius:10px;padding:0 5px;min-width:16px}
+  header{gap:6px}
+  header .brand small{display:none}
+  .stat{font-size:11px;padding:3px 6px}
+  .tx{height:170px}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ START SCREEN ============ -->
+<div id="start">
+  <span class="badge">TRAINING SIMULATION · NOT A REAL 911 SYSTEM</span>
+  <h1>Lawrence County, Ohio 911 — Dispatch Simulator</h1>
+  <div class="dim">You're the telecommunicator on the floor at the county's 911 center. Answer the lines, build incidents in CAD, send the right units, and run the radio.</div>
+
+  <div class="card hidden" id="joinCard" style="border-color:#059669">
+    <b style="color:var(--green)">A shift is running in another window</b> <span class="dim mono" id="joinInfo"></span>
+    <div class="dim" style="margin:4px 0 8px">Make this window an extra monitor. It mirrors the main screen, and anything you click here happens on the shift.</div>
+    <div class="acts">
+      <button class="go" onclick="joinAs('pc')">Phones + CAD</button><button class="go" onclick="joinAs('cad')">CAD</button><button class="go" onclick="joinAs('map')">Map</button>
+      <button class="go" onclick="joinAs('radio')">Radio</button><button class="go" onclick="joinAs('leads')">LEADS</button><button class="go" onclick="joinAs('units')">Unit board</button><button class="go" onclick="joinAs('phones')">Phones</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="row">
+      <div><label class="f">Shift length</label>
+        <select id="optLen"><option value="600">10 minutes</option><option value="1200" selected>20 minutes</option><option value="1800">30 minutes</option><option value="3600">60 minutes</option></select></div>
+      <div><label class="f">Call volume</label>
+        <select id="optDiff"><option value="easy">Quiet night shift</option><option value="normal" selected>Normal day</option><option value="hard">Holiday weekend</option></select></div>
+      <div><label class="f">Voice (text-to-speech)</label>
+        <select id="optVoice"><option value="1" selected>Radio + callers spoken</option><option value="r">Radio only</option><option value="0">Off</option></select></div>
+      <div><label class="f">Sound effects</label>
+        <select id="optSfx"><option value="1" selected>On</option><option value="0">Off</option></select></div>
+    </div>
+    <div style="margin-top:12px"><button class="go" id="btnStart" style="width:100%;padding:12px;font-size:16px">Log on & start shift</button></div>
+  </div>
+
+  <div class="card">
+    <b>How to work a call</b>
+    <ul>
+      <li><b>PHONES</b> — Ringing lines flash red. Answer fast (goal: within 15 seconds). Check the ALI box: landlines show an address; cell calls only show an approximate location.</li>
+      <li>Use the question buttons to interview the caller. Always verify the <b>address</b> and <b>callback number</b>, then get the facts that matter for that call type (breathing, weapons, people inside…). Some calls have special actions, like CPR instructions.</li>
+      <li><b>CAD</b> — Press <b>Create Incident</b>, pick the nature code, priority, and response zone. Then <b>Assign</b> units; CAD will recommend the closest ones. Priority 1 goal: dispatched within about 90 seconds of answering.</li>
+      <li><b>RADIO</b> — Units call in status changes and requests. <b>Acknowledge</b> every transmission. Run plates in LEADS, call wreckers, send backup, re-tone volunteer departments that don't answer, and treat any <b>EMERGENCY</b> alert as your top priority.</li>
+      <li>Not every call needs units. Transfer calls that are outside your county, handle pocket dials and non-emergencies without dispatching, and link duplicate callers to the existing incident.</li>
+    </ul>
+  </div>
+  <div class="card dim" style="font-size:12px">
+    <b style="color:var(--txt)">About the realism.</b> The county agencies, fire department station numbers (100–2100), the Lawrence County EMS headquarters in Coal Grove, MARCS talkgroup names, and the area hospitals are real. Unit numbers, EMS post locations, callers, addresses, plates, and protocols are fictional or simplified for gameplay, and the map is schematic, not to scale. Never use this to make real emergency decisions.
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="app" class="hidden">
+  <header>
+    <div class="brand">LAWRENCE CO. 911 <small>CAD // PSAP SIM · COAL GROVE</small></div>
+    <span class="stat">⏱ <b id="clk">00:00</b></span>
+    <span class="stat">Shift <b id="left">--:--</b></span>
+    <span class="stat">Score <b id="score">0</b></span>
+    <span class="stat">Active <b id="act">0</b></span>
+    <span class="sp"></span>
+    <label class="stat" style="display:flex;align-items:center;gap:6px">Screen <select id="layout" style="width:auto;padding:3px 6px;font-size:12px">
+      <option value="all">Everything</option><option value="pc">Phones + CAD</option><option value="phones">Phones</option><option value="cad">CAD</option><option value="leads">LEADS</option><option value="map">Map</option><option value="radio">Radio</option><option value="cr">CAD + Radio</option><option value="units">Unit board</option></select></label>
+    <button id="btnMon" title="Use more monitors">🖥🖥</button>
+    <button id="btnPause">Pause</button>
+    <button id="btnEnd" class="warn">End shift</button>
+  </header>
+  <div id="lostBanner" class="hidden" style="background:#7f1d1d;padding:6px 10px;font-size:13px">Lost contact with the main screen. Make sure the window running the shift is still open.</div>
+  <main class="lay-all">
+    <section class="pnl show" id="pPhone">
+      <h2>☎ Phones <span class="sp"></span><span class="mono" id="phSum"></span></h2>
+      <div class="body" id="phone"></div>
+    </section>
+    <section class="pnl" id="pCad">
+      <h2>CAD <button id="vInc" class="vt on">Incidents</button><button id="vLeads" class="vt">LEADS</button><button id="vMap" class="vt">Map</button><span class="sp"></span><button id="btnNewInc" style="padding:3px 8px;font-size:11px">+ New incident</button></h2>
+      <div class="cmdbar"><span class="mono" style="color:var(--green)">CMD&gt;</span><input id="cmd" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="D 803 Medic 2 · RQ HFY5034 · HELP"><button id="cmdGo">Enter</button></div>
+      <div class="cmdhint mono" id="cmdHint"></div>
+      <pre class="cmdlog" id="cmdLog"></pre>
+      <div class="body" id="cad">
+        <div id="cadInc"></div>
+        <div id="cadMap" class="hidden"></div>
+        <div id="leads" class="hidden">
+          <div class="lform">
+            <div class="row">
+              <div style="flex:2;min-width:220px"><label class="f">Message key</label><select id="lType">
+                <option value="veh">RQ / QV — Registration + stolen check (plate)</option>
+                <option value="vin">QV — Vehicle by VIN</option>
+                <option value="per">DQ / QW — Driver + wanted person (name, DOB)</option>
+                <option value="ol">DQ / QW — Driver by OL number</option>
+                <option value="qr">QR — Criminal history (III)</option></select></div>
+            </div>
+            <div class="row" style="margin-top:6px">
+              <div data-f="veh"><label class="f">LIC/ plate</label><input id="lPlate" autocapitalize="characters" placeholder="HFY5034"></div>
+              <div data-f="veh" style="max-width:90px"><label class="f">LIS/</label><select id="lState"><option>OH</option><option>KY</option><option>WV</option></select></div>
+              <div data-f="vin"><label class="f">VIN/ (17)</label><input id="lVin" autocapitalize="characters"></div>
+              <div data-f="per qr"><label class="f">Last</label><input id="lLast" autocapitalize="characters"></div>
+              <div data-f="per qr"><label class="f">First</label><input id="lFirst" autocapitalize="characters"></div>
+              <div data-f="per qr" style="max-width:130px"><label class="f">DOB/ MMDDYYYY</label><input id="lDob" inputmode="numeric"></div>
+              <div data-f="ol"><label class="f">OLN/</label><input id="lOl" autocapitalize="characters" placeholder="AB123456"></div>
+              <div data-f="qr" style="max-width:150px"><label class="f">PUR/ purpose code</label><select id="lPur"><option value="">—</option><option value="C">C — Criminal justice</option><option value="J">J — CJ employment</option><option value="E">E — Other employment</option></select></div>
+              <div style="max-width:120px;align-self:flex-end"><button class="go" id="lGo" style="width:100%">Transmit</button></div>
+            </div>
+          </div>
+          <div id="lOut"></div>
+          <div class="dim" style="font-size:11px;margin-top:6px">Simulated terminal. NCIC/NLETS message keys are real; response layouts, records, ORIs and people are fictional.</div>
+        </div>
+      </div>
+    </section>
+    <section class="pnl" id="pRadio">
+      <h2>📻 Radio — MARCS <span class="sp"></span><span class="mono" id="rdSum"></span></h2>
+      <div class="tgs" id="tgs"></div>
+      <div class="body" id="radio"></div>
+      <div class="ptt">
+        <select id="pttUnit" style="flex:1"></select>
+        <button id="btnStatusChk">Status check</button>
+      </div>
+    </section>
+    <div id="pBottom">
+      <section class="pnl" id="pUnits"><h2>Unit status board</h2><div class="body" id="units"></div></section>
+      <section class="pnl" id="pMap"><h2>Map</h2><div class="body mapbody" id="map"></div></section>
+    </div>
+    <section class="pnl" id="pBigMap"><h2>CAD Map — Lawrence County</h2><div class="body mapbody" id="bigMap"></div></section>
+  </main>
+  <nav id="tabs">
+    <button data-t="pPhone" class="on">☎ Phones<span class="dot hidden" id="dPh"></span></button>
+    <button data-t="pCad" data-v="inc">🖥 CAD<span class="dot hidden" id="dCad"></span></button>
+    <button data-t="pCad" data-v="leads">🔎 LEADS</button>
+    <button data-t="pRadio">📻 Radio<span class="dot hidden" id="dRd"></span></button>
+    <button data-t="pBottom">🚓 Units</button>
+  </nav>
+</div>
+
+<div id="modal" class="hidden"><div class="box" id="mbox"></div></div>
+<div id="toast"></div>
+
+<!-- ============ REPORT ============ -->
+<div id="report" class="hidden"></div>
+
+<script>
+"use strict";
+/* =================== UTIL =================== */
+const $=s=>document.querySelector(s);
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const ri=(a,b)=>Math.floor(rnd(a,b+1));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const chance=p=>Math.random()<p;
+function setHTML(el,html){if(!el)return;const t=document.createElement('template');t.innerHTML=html;morphKids(el,t.content)}
+function morphKids(a,b){const an=[...a.childNodes],bn=[...b.childNodes];
+  for(let i=0;i<bn.length;i++){const x=an[i],y=bn[i];
+    if(!x){a.appendChild(y.cloneNode(true));continue}
+    if(x.nodeType!==y.nodeType||x.nodeName!==y.nodeName){a.replaceChild(y.cloneNode(true),x);continue}
+    if(x.nodeType!==1){if(x.nodeValue!==y.nodeValue)x.nodeValue=y.nodeValue;continue}
+    for(const at of [...x.attributes])if(!y.hasAttribute(at.name))x.removeAttribute(at.name);
+    for(const at of y.attributes)if(x.getAttribute(at.name)!==at.value)x.setAttribute(at.name,at.value);
+    morphKids(x,y);}
+  for(let i=an.length-1;i>=bn.length;i--)a.removeChild(an[i]);}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=s=>{s=Math.max(0,Math.floor(s));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')};
+const phoneNum=()=>`(740) ${pick(['532','533','534','377','886','894','867','643','237'])}-${String(ri(0,9999)).padStart(4,'0')}`;
+const plate=()=>{const L='ABCDFGHJKMNPRSTVWXYZ';return L[ri(0,19)]+L[ri(0,19)]+L[ri(0,19)]+' '+ri(1000,9999)};
+const FIRST=['Linda','Gary','Brenda','Mike','Tammy','Jeff','Debbie','Rick','Amanda','Josh','Heather','Bobby','Crystal','Dale','Kayla','Travis','Sherry','Wayne','Ashley','Darrell'];
+const LAST=['Adkins','Wells','Ward','Delong','Mullins','Collins','Kitts','Hall','Thompson','Brammer','Webb','Chapman','Fraley','Maynard','Holley','Lambert','Rowe','Dillow'];
+const person=()=>pick(FIRST)+' '+pick(LAST);
+const CARS=['silver Chevy Silverado','black Ford F-150','white Dodge Ram','red Honda Civic','gray Toyota Camry','blue Jeep Cherokee','maroon Chevy Impala','white Nissan Altima'];
+
+/* =================== GEOGRAPHY =================== */
+// Response zones. Fire dept numbers are the real county station numbers; everything else is simplified.
+const Z={
+ IRON:{n:'Ironton',lat:38.537,lon:-82.683,fd:'900',le:'IPD',st:['S 3rd St','S 4th St','Park Ave','SR-93','SR-141'],hwy:'US-52',town:1},
+ COAL:{n:'Coal Grove',lat:38.503,lon:-82.647,fd:'400',le:'CGPD',st:['Lane St','US-52'],hwy:'US-52',town:1},
+ HANG:{n:'Hanging Rock',lat:38.558,lon:-82.726,fd:'800',le:'HRPD',st:['US-52'],hwy:'US-52',town:1},
+ HAM:{n:'Hamilton Twp',lat:38.600,lon:-82.725,fd:'800',le:'LCSO',st:['County Road #','Township Road #']},
+ SPT:{n:'South Point',lat:38.418,lon:-82.586,fd:'1400',le:'SPPD',st:['County Road 120','US-52'],hwy:'US-52',town:1},
+ BURL:{n:'Burlington / Fayette Twp',lat:38.407,lon:-82.535,fd:'200',le:'LCSO',st:['US-52','County Road #','Township Road #'],hwy:'US-52'},
+ CHES:{n:'Chesapeake',lat:38.428,lon:-82.457,fd:'300',le:'CPD',st:['SR-7','US-52'],hwy:'US-52',town:1},
+ PROC:{n:'Proctorville',lat:38.437,lon:-82.377,fd:'1200',le:'PPD',st:['State St','SR-7'],hwy:'SR-7',town:1},
+ ATH:{n:'Athalia',lat:38.512,lon:-82.300,fd:'1300',le:'APD',st:['SR-7'],hwy:'SR-7',town:1},
+ ROME:{n:'Rome Twp',lat:38.545,lon:-82.335,fd:'1300',le:'LCSO',st:['SR-7','County Road #','Township Road #'],hwy:'SR-7'},
+ WIND:{n:'Windsor Twp',lat:38.565,lon:-82.400,fd:'1600',le:'LCSO',st:['County Road #','Township Road #']},
+ PERRY:{n:'Perry Twp',lat:38.475,lon:-82.560,fd:'2100',le:'LCSO',st:['County Road #','Township Road #']},
+ LAWT:{n:'Lawrence Twp (Kitts Hill)',lat:38.561,lon:-82.577,fd:'1100',le:'LCSO',st:['County Road #','Township Road #']},
+ UPPER:{n:'Upper Twp',lat:38.585,lon:-82.665,fd:'1500',le:'LCSO',st:['SR-93','SR-141','County Road #','Township Road #'],hwy:'SR-93'},
+ ELIZ:{n:'Elizabeth Twp',lat:38.640,lon:-82.610,fd:'600',le:'LCSO',st:['County Road #','Township Road #']},
+ WASH:{n:'Washington Twp',lat:38.700,lon:-82.640,fd:'1700',le:'LCSO',st:['County Road #','Township Road #']},
+ DEC:{n:'Decatur Twp',lat:38.725,lon:-82.735,fd:'500',le:'LCSO',st:['County Road #','Township Road #']},
+ AID:{n:'Aid Twp',lat:38.680,lon:-82.505,fd:'100',le:'LCSO',st:['County Road #','Township Road #']}
+};
+const ZK=Object.keys(Z);
+const FDN={'100':'Aid Twp VFD','200':'Burlington-Fayette Twp FD','300':'Chesapeake-Union Twp FD','400':'Coal Grove FD','500':'Decatur Twp FD','600':'Elizabeth Twp FD','700':'Fayette #2 VFD','800':'Hamilton Twp FD','900':'Ironton FD','1100':'Lawrence Twp FD','1200':'Proctorville-Union Twp FD','1300':'Rome VFD','1400':'South Point FD','1500':'Upper Twp FD','1600':'Windsor Twp FD','1700':'Washington Twp FD','2100':'Perry Twp VFD'};
+const HOSP=["King's Daughters Medical Center (Ashland, KY)","Cabell Huntington Hospital","St. Mary's Medical Center (Huntington)","Southern Ohio Medical Center (Portsmouth)"];
+function dist(a,b){const dy=(a.lat-b.lat)*69,dx=(a.lon-b.lon)*54;return Math.sqrt(dx*dx+dy*dy)}
+function addrFor(zk,preferHwy){
+  const z=Z[zk];
+  if(preferHwy&&z.hwy) return `${z.hwy} near mile marker ${ri(1,24)}`;
+  let s=pick(z.st);
+  if(s.includes('#')) s=s.replace('#',s.startsWith('County')?ri(1,60):ri(100,320));
+  return `${ri(1,9)*100+ri(1,99)} ${s}`;
+}
+
+/* =================== NATURE CODES =================== */
+// Buckeye State Sheriffs' Association (BSSA) codes used on law dispatches. Odd numbers = Signals, even = Codes.
+const BSSA={MVA:'2',MVAI:'4',DOM:'20',BURG:'12A',SUSP:'60',HAZ:'80',SF:'28B',VF:'28A',BRUSH:'28',WATER:'22',TS:'86'};
+const bw=c=>(parseInt(c)%2?'Signal ':'Code ')+c;
+const NAT={
+ CARD:{d:'Cardiac / Resp Arrest',p:1,need:['EMS','FIRE']},
+ CHEST:{d:'Chest Pain',p:1,need:['EMS']},
+ BREATH:{d:'Breathing Problem',p:1,need:['EMS']},
+ STROKE:{d:'Stroke / CVA',p:1,need:['EMS']},
+ OD:{d:'Overdose / Poisoning',p:1,need:['EMS','LE']},
+ FALL:{d:'Fall',p:2,need:['EMS']},
+ DIAB:{d:'Diabetic Problem',p:2,need:['EMS']},
+ SICK:{d:'Sick Person',p:3,need:['EMS']},
+ SF:{d:'Structure Fire',p:1,need:['FIRE','EMS','LE']},
+ BRUSH:{d:'Brush / Grass Fire',p:2,need:['FIRE']},
+ VF:{d:'Vehicle Fire',p:2,need:['FIRE','LE']},
+ GAS:{d:'Gas Leak / Odor',p:2,need:['FIRE']},
+ MVAI:{d:'MVA w/ Injuries',p:1,need:['EMS','FIRE','LE']},
+ MVA:{d:'MVA Non-Injury',p:3,need:['LE']},
+ DOM:{d:'Domestic Disturbance',p:1,need:['LE']},
+ BURG:{d:'Burglary in Progress',p:1,need:['LE']},
+ SUSP:{d:'Suspicious Person / Vehicle',p:2,need:['LE']},
+ WELF:{d:'Welfare Check',p:2,need:['LE']},
+ HAZ:{d:'Road Hazard / Tree Down',p:3,need:['LE']},
+ WATER:{d:'Water Rescue',p:1,need:['FIRE','EMS','LE']},
+ TS:{d:'Traffic Stop',p:3,need:['LE']},
+ INFO:{d:'Info Only / No Dispatch',p:3,need:[]}
+};
+
+/* =================== QUESTIONS =================== */
+const Q=[
+ ['address',"What's the address of your emergency?"],
+ ['callback',"What's the number you're calling from?"],
+ ['what',"Tell me exactly what happened."],
+ ['injuries',"Is anyone hurt?"],
+ ['conscious',"Is the patient awake and breathing?"],
+ ['weapons',"Are there any weapons involved?"],
+ ['hazards',"Is anyone trapped or still inside? Any hazards?"],
+ ['suspect',"Describe the person or vehicle."],
+ ['name',"What's your name?"],
+ ['stay',"Help is on the way. Stay on the line with me."]
+];
+
+/* =================== SCENARIOS =================== */
+// a = context: {addr, zk, name, cb, ...}
+const SC=[
+ {id:'card',w:5,nat:'CARD',panic:1,req:['address','callback','conscious'],
+  open:a=>"Please help me! My husband just collapsed and he's not breathing!",
+  ans:{address:a=>`${a.addr}! Please hurry!`,what:a=>"He was sitting at the kitchen table and just fell over. He's turning blue!",conscious:a=>"No! He's not breathing, he's not moving at all!",injuries:a=>"He hit his head when he fell but that's not, he's not breathing!",weapons:a=>"What? No!",hazards:a=>"No, it's just me and him.",suspect:a=>"It's my husband, he's 67.",name:a=>`${a.name}.`,callback:a=>`${a.cb}.`,stay:a=>"Okay... okay. Please tell me what to do!"},
+  special:[{k:'cpr',l:'Give CPR instructions',pts:15,r:"Okay, I've got him on the floor on his back. I'm pushing hard and fast in the middle of his chest... one, two, three, four..."}]},
+ {id:'chest',w:5,nat:'CHEST',panic:.5,req:['address','callback','conscious'],
+  open:a=>"Yeah, I've got chest pain and it's going down my left arm.",
+  ans:{address:a=>`I'm at ${a.addr}.`,what:a=>"Started about twenty minutes ago. Feels like an elephant sitting on me. I'm sweating bad.",conscious:a=>"I'm awake, I'm talking to you. Just hard to catch my breath.",injuries:a=>"No, no injuries.",weapons:a=>"No.",hazards:a=>"Front door's unlocked. Got a dog but he's friendly.",suspect:a=>"I'm 58, I've got a history of high blood pressure.",name:a=>`${a.name}.`,callback:a=>`${a.cb}.`,stay:a=>"Alright, I'll stay on."},
+  special:[{k:'aspirin',l:'Ask about aspirin / meds',pts:5,r:"I'm not allergic to aspirin, I take a blood pressure pill. Want me to take an aspirin? Okay, chewing one now."}]},
+ {id:'breath',w:3,nat:'BREATH',panic:.7,req:['address','callback','conscious'],
+  open:a=>"My mom can't breathe! She has COPD and her oxygen isn't helping!",
+  ans:{address:a=>`${a.addr}.`,what:a=>"She's been getting worse all day and now she can barely talk.",conscious:a=>"She's awake but she's gasping, her lips look kind of gray.",injuries:a=>"No.",weapons:a=>"No.",hazards:a=>"She's on home oxygen. Nobody smokes.",suspect:a=>"She's 74.",name:a=>`${a.name}.`,callback:a=>`${a.cb}.`,stay:a=>"Okay, I'm right here with her."}},
+ {id:'stroke',w:2,nat:'STROKE',panic:.6,req:['address','callback','conscious'],
+  open:a=>"Something's wrong with my dad. His face is drooping and he's not making sense.",
+  ans:{address:a=>`${a.addr}.`,what:a=>"He was fine at lunch. About thirty minutes ago he started slurring and can't lift his right arm.",conscious:a=>"He's awake and breathing, he's just confused.",injuries:a=>"No.",weapons:a=>"No.",hazards:a=>"No.",suspect:a=>"He's 71.",name:a=>`${a.name}.`,callback:a=>`${a.cb}.`,stay:a=>"Okay."},
+  special:[{k:'lkw',l:'Ask "last known well" time',pts:8,r:"Last time he was normal was right around 12:30."}]},
+ {id:'od',w:4,nat:'OD',panic:.9,req:['address','callback','conscious','weapons'],
+  open:a=>"My boyfriend took something and he won't wake up!",
+  ans:{address:a=>`We're at ${a.addr}.`,what:a=>"I think it was fentanyl. He went in the bathroom and I found him on the floor.",conscious:a=>"He's breathing but it's like snoring, real slow. He won't wake up.",injuries:a=>"I don't think he's hurt.",weapons:a=>"No, no weapons.",hazards:a=>"There's needles in the bathroom.",suspect:a=>"He's 29.",name:a=>`${a.name}.`,callback:a=>`${a.cb}.`,stay:a=>"Okay, please hurry."},
+  special:[{k:'narcan',l:'Ask about Narcan (naloxone)',pts:10,r:"Yes! There's Narcan in the kitchen drawer. Okay... I sprayed it in his nose. He's starting to move!"}]},
+ {id:'fall',w:4,nat:'FALL',panic:.3,req:['address','callback','conscious'],
+  open:a=>"Hi, my grandmother fell and I can't get her up.",
+  ans:{address:a=>`${a.addr}.`,what:a=>"She fell in the bathroom. She says her hip hurts.",conscious:a=>"She's awake and talking to me.",injuries:a=>"She can't move her right leg, says her hip hurts. No bleeding.",weapons:a=>"No.",hazards:a=>"Front door is locked, I'll go unlock it.",suspect:a=>"She's 88.",name:a=>`${a.name}.`,callback:a=>`${a.cb}.`,stay:a=>"Sure."},
+  special:[{k:'nomove',l:"Tell caller not to move her",pts:5,r:"Okay, I'll leave her right where she is and keep her warm."}]},
+ {id:'diab',w:2,nat:'DIAB',panic:.5,req:['address','callback','conscious'],
+  open:a=>"My husband is diabetic and he's acting really strange.",
+  ans:{address:a=>`${a.addr}.`,what:a=>"His sugar was 41 on the meter. He's sweaty and confused.",conscious:a=>"He's awake but not making sense. He's breathing fine.",injuries:a=>"No.",weapons:a=>"No.",hazards:a=>"No.",suspect:a=>"He's 52.",name:a=>`${a.name}.`,callback:a=>`${a.cb}.`,stay:a=>"Okay."},
+  special:[{k:'sugar',l:'Advise sugar if able to swallow',pts:5,r:"He can swallow. I'm giving him some orange juice now."}]},
+ {id:'sf',w:4,nat:'SF',panic:1,req:['address','callback','hazards'],dupChance:.5,
+  open:a=>"My house is on fire! There's smoke everywhere!",
+  ans:{address:a=>`${a.addr}! It's a two-story house!`,what:a=>"It started in the kitchen. Flames are coming out the back window now.",conscious:a=>"We're all out, we're okay.",injuries:a=>"My son got some smoke but he's breathing okay.",weapons:a=>"No.",hazards:a=>"Everybody's out except our dog. There's a propane tank on the back porch!",suspect:a=>"Two-story white house with a red truck in the driveway.",name:a=>`${a.name}.`,callback:a=>`${a.cb}.`,stay:a=>"Okay, we're across the street."},
+  special:[{k:'getout',l:'Tell them: stay out, do not go back in',pts:10,r:"Okay, okay, we won't go back in. Everybody's by the mailbox."}]},
+ {id:'brush',w:2,nat:'BRUSH',panic:.4,req:['address','callback','hazards'],
+  open:a=>"There's a grass fire getting away from my neighbor's burn pile.",
+  ans:{address:a=>`It's at ${a.addr}.`,what:a=>"He was burning brush and the wind caught it. It's about an acre now and moving up the hill.",conscious:a=>"Nobody's hurt.",injuries:a=>"No.",weapons:a=>"No.",hazards:a=>"It's heading toward a barn. There's a fence line and a woods behind it.",suspect:a=>"",name:a=>`${a.name}.`,callback:a=>`${a.cb}.`,stay:a=>"Alright."}},
+ {id:'vf',w:2,nat:'VF',panic:.5,req:['address','callback','hazards'],hwy:1,
+  open:a=>"There's a car on fire on the side of the road!",
+  ans:{address:a=>`${a.addr}, on the shoulder.`,what:a=>"Smoke started coming out of the hood and now it's flames.",conscious:a=>"The driver got out, he's standing back.",injuries:a=>"No, he looks okay.",weapons:a=>"No.",hazards:a=>"It's close to the traffic lane, cars are slowing down.",suspect:a=>`It's a ${pick(CARS)}.`,name:a=>`${a.name}.`,callback:a=>`${a.cb}.`,stay:a=>"Okay."}},
+ {id:'gas',w:2,nat:'GAS',panic:.4,req:['address','callback','hazards'],
+  open:a=>"I smell a strong gas smell in my house.",
+  ans:{address:a=>`${a.addr}.`,what:a=>"Just came home and it hit me as soon as I opened the door.",conscious:a=>"We feel okay, a little headache.",injuries:a=>"No.",weapons:a=>"No.",hazards:a=>"I'm still inside. The furnace is natural gas.",suspect:a=>"",name:a=>`${a.name}.`,callback:a=>`${a.cb}.`,stay:a=>"Okay."},
+  special:[{k:'evac',l:'Tell caller: get out, no switches/flames',pts:10,r:"Okay, I'm going outside now. I won't touch any lights."}]},
+ {id:'mvai',w:4,nat:'MVAI',panic:.8,req:['address','callback','injuries','hazards'],hwy:1,dupChance:.5,
+  open:a=>"There's been a bad wreck! Two cars hit head-on!",
+  ans:{address:a=>`${a.addr}!`,what:a=>"A car crossed the center line and hit a truck. I saw it happen.",conscious:a=>"The lady in the car is awake but there's a lot of blood.",injuries:a=>"The lady in the car is bleeding from her head. The truck driver's walking around.",weapons:a=>"No.",hazards:a=>"She's pinned in, the door's smashed in. There's fluid leaking on the road.",suspect:a=>`A ${pick(CARS)} and a ${pick(CARS)}.`,name:a=>`${a.name}.`,callback:a=>`${a.cb}.`,stay:a=>"Okay, I'm pulled off on the shoulder."}},
+ {id:'mva',w:3,nat:'MVA',panic:.2,req:['address','callback','injuries'],hwy:1,
+  open:a=>"Yeah, I've been rear-ended. Nobody's hurt, just need a report.",
+  ans:{address:a=>`We're at ${a.addr}, pulled into a lot.`,what:a=>"I was stopped at the light and she ran right into me.",conscious:a=>"Everybody's fine.",injuries:a=>"Nobody's hurt.",weapons:a=>"No.",hazards:a=>"Cars are out of the road.",suspect:a=>`I'm in a ${pick(CARS)}.`,name:a=>`${a.name}.`,callback:a=>`${a.cb}.`,stay:a=>"Okay."}},
+ {id:'dom',w:4,nat:'DOM',panic:.9,req:['address','callback','weapons','injuries'],
+  open:a=>"(whispering) Please send somebody... he's going to hurt me.",
+  ans:{address:a=>`${a.addr}... please hurry.`,what:a=>"My husband's drunk and he's been throwing stuff. He pushed me into the wall.",conscious:a=>"",injuries:a=>"My lip's bleeding. I'm okay.",weapons:a=>"He's got a pistol in the truck. I don't know if he has it on him.",hazards:a=>"My two kids are in their room.",suspect:a=>"White male, 40, gray t-shirt, jeans. He's drunk.",name:a=>`${a.name}.`,callback:a=>`${a.cb}.`,stay:a=>"I'm in the bathroom with the door locked."},
+  special:[{k:'safe',l:'Ask if she can get somewhere safe',pts:8,r:"I locked myself in the bathroom. I'm staying here."}]},
+ {id:'burg',w:3,nat:'BURG',panic:.7,req:['address','callback','weapons','suspect'],
+  open:a=>"Somebody's breaking into my garage right now!",
+  ans:{address:a=>`${a.addr}.`,what:a=>"I heard the side door get kicked in. I can see a flashlight in there.",conscious:a=>"",injuries:a=>"No.",weapons:a=>"I don't see any. I've got a shotgun in the house.",hazards:a=>"I'm in the bedroom upstairs.",suspect:a=>`Looks like two guys, hoodies. There's a ${pick(CARS)} at the end of the drive with no lights on.`,name:a=>`${a.name}.`,callback:a=>`${a.cb}.`,stay:a=>"Okay, I'm staying on."},
+  special:[{k:'nogun',l:"Advise: stay inside, don't confront",pts:8,r:"Alright, I'll stay put up here. I won't go down there."}]},
+ {id:'susp',w:3,nat:'SUSP',panic:.2,req:['address','callback','suspect'],
+  open:a=>"There's a car that's been sitting at the end of our road for an hour with the lights off.",
+  ans:{address:a=>`It's near ${a.addr}.`,what:a=>"Somebody's in it, I can see a phone screen lit up. We've had break-ins around here.",conscious:a=>"",injuries:a=>"No.",weapons:a=>"I haven't seen any.",hazards:a=>"No.",suspect:a=>`${pick(CARS)}, I couldn't get the plate.`,name:a=>`${a.name}.`,callback:a=>`${a.cb}.`,stay:a=>"I'm fine, you don't need me on the line."}},
+ {id:'haz',w:2,nat:'HAZ',panic:.1,req:['address','callback'],
+  open:a=>"There's a big tree down across the road.",
+  ans:{address:a=>`On ${a.addr}.`,what:a=>"Blocking both lanes. Looks like the wind took it down.",conscious:a=>"",injuries:a=>"No, nobody hit it.",weapons:a=>"No.",hazards:a=>"No power lines on it that I can see.",suspect:a=>"",name:a=>`${a.name}.`,callback:a=>`${a.cb}.`,stay:a=>"I'll be fine."}},
+ {id:'water',w:1,nat:'WATER',panic:1,req:['address','callback','hazards'],zones:['IRON','COAL','SPT','CHES','PROC','ATH','HANG','BURL'],
+  open:a=>"There's somebody in the river! Their boat flipped!",
+  ans:{address:a=>`At the boat ramp off ${a.addr}! In the Ohio River!`,what:a=>"Small jon boat flipped. One guy's holding on to it and drifting.",conscious:a=>"He's awake, yelling for help.",injuries:a=>"I don't know.",weapons:a=>"No.",hazards:a=>"Current's strong. He doesn't have a life jacket.",suspect:a=>"Older man, orange shirt.",name:a=>`${a.name}.`,callback:a=>`${a.cb}.`,stay:a=>"I'm going to follow him down the bank."},
+  special:[{k:'throw',l:"Advise: don't go in, throw something",pts:10,r:"Okay, I'm not going in. I'm throwing a cooler out to him."}]},
+ // ---- No-dispatch / special-handling calls ----
+ {id:'xfer_ky',w:2,nat:null,xfer:'Boyd Co. KY 911',panic:.6,req:['address'],wireless:1,
+  open:a=>"I need an ambulance, a guy just fell off a ladder!",
+  ans:{address:a=>"I'm on Winchester Avenue in Ashland... is this Kentucky 911?",what:a=>"He fell about ten feet off a ladder working on a gutter.",conscious:a=>"He's awake, holding his arm.",injuries:a=>"His arm's broke I think.",weapons:a=>"No.",hazards:a=>"No.",suspect:a=>"",name:a=>`${a.name}.`,callback:a=>`${a.cb}.`,stay:a=>"Okay."}},
+ {id:'xfer_wv',w:2,nat:null,xfer:'Cabell Co. WV 911',panic:.4,req:['address'],wireless:1,
+  open:a=>"Yeah, I want to report a wreck.",
+  ans:{address:a=>"I'm on Fifth Avenue in downtown Huntington.",what:a=>"Two cars, fender bender at the light. Nobody looks hurt.",conscious:a=>"",injuries:a=>"No.",weapons:a=>"No.",hazards:a=>"It's blocking a lane.",suspect:a=>"",name:a=>`${a.name}.`,callback:a=>`${a.cb}.`,stay:a=>"Okay."}},
+ {id:'xfer_sc',w:1,nat:null,xfer:'Scioto Co. OH 911',panic:.5,req:['address'],wireless:1,
+  open:a=>"I need a deputy, someone stole my four-wheeler.",
+  ans:{address:a=>"I'm on Gallia Street in Portsmouth.",what:a=>"Somebody took it out of my yard last night.",conscious:a=>"",injuries:a=>"No.",weapons:a=>"No.",hazards:a=>"No.",suspect:a=>"",name:a=>`${a.name}.`,callback:a=>`${a.cb}.`,stay:a=>"Okay."}},
+ {id:'pocket',w:2,nat:null,noDispatch:1,panic:0,req:['address'],wireless:1,
+  open:a=>"(open line — rustling, muffled music and road noise)",
+  ans:{address:a=>"(no response — rustling continues)",what:a=>"(no response)",callback:a=>"(no response)",stay:a=>"(rustling)",conscious:a=>"(no response)",injuries:a=>"(no response)",weapons:a=>"(no response)",hazards:a=>"(no response)",suspect:a=>"(no response)",name:a=>"(no response)"},
+  callback:"Oh! Sorry, that was a pocket dial. No emergency, everybody's fine.",cbOk:1},
+ {id:'hangup',w:2,nat:'WELF',panic:0,req:['address'],
+  open:a=>"(open line — a woman yelling \"Stop!\", then the line disconnects)",hangsUp:1,
+  ans:{},callback:"(rings 6 times — no answer, goes to a full voicemail box)",cbOk:0},
+ {id:'nonemerg',w:2,nat:null,noDispatch:1,panic:0,req:['address'],
+  open:a=>"Hi, yeah, is the power out for everybody? Mine just went off.",
+  ans:{address:a=>`${a.addr}.`,what:a=>"Just the power. Everything's dark on my street.",conscious:a=>"Everybody's fine.",injuries:a=>"No, nobody's hurt.",weapons:a=>"No.",hazards:a=>"No lines down that I can see.",suspect:a=>"",name:a=>`${a.name}.`,callback:a=>`${a.cb}.`,stay:a=>"Oh, it's not an emergency, I just wondered."},
+  special:[{k:'advise',l:'Advise: report to utility; call back if lines down',pts:8,r:"Okay, I'll call the power company. Thanks, sorry to bother you."}]}
+];
+
+/* =================== UNITS =================== */
+function mkUnits(){
+  const U=[];
+  const add=(id,type,ag,home,tg,extra={})=>U.push(Object.assign({id,type,ag,home,tg,st:'AV',inc:null,next:0,pos:{lat:Z[home].lat+rnd(-.01,.01),lon:Z[home].lon+rnd(-.01,.01)}},extra));
+  // Law
+  // Sheriff 1-100 · Ironton 801-817 · Hanging Rock 301-305 · Coal Grove 401-409 · South Point 501-509 · Chesapeake 601-612 · Proctorville 701-705 · Athalia 751-753
+  [['12','HAM'],['17','UPPER'],['23','ROME'],['31','ELIZ'],['38','WIND'],['44','PERRY'],['56','LAWT']].forEach(([i,h])=>add(i,'LE',"Lawrence Co. Sheriff",h,'SO44DSP',{agency:'LCSO'}));
+  [['803','IRON'],['808','IRON'],['814','IRON']].forEach(([i,h])=>add(i,'LE','Ironton PD',h,'SO44DSP',{agency:'IPD'}));
+  add('302','LE','Hanging Rock PD','HANG','SO44DSP',{agency:'HRPD'});
+  [['402','COAL'],['406','COAL']].forEach(([i,h])=>add(i,'LE','Coal Grove PD',h,'SO44DSP',{agency:'CGPD'}));
+  [['503','SPT'],['507','SPT']].forEach(([i,h])=>add(i,'LE','South Point PD',h,'SO44DSP',{agency:'SPPD'}));
+  [['604','CHES'],['610','CHES']].forEach(([i,h])=>add(i,'LE','Chesapeake PD',h,'SO44DSP',{agency:'CPD'}));
+  add('702','LE','Proctorville PD','PROC','SO44DSP',{agency:'PPD'});
+  add('751','LE','Athalia PD','ATH','SO44DSP',{agency:'APD'});
+  add('OSHP-1','LE','Ohio State Hwy Patrol','COAL','XSO-44',{agency:'OSHP'});
+  add('OSHP-2','LE','Ohio State Hwy Patrol','CHES','XSO-44',{agency:'OSHP'});
+  // Fire — one engine per department (+ Ironton truck)
+  const fdHome={'100':'AID','200':'BURL','300':'CHES','400':'COAL','500':'DEC','600':'ELIZ','700':'BURL','800':'HAM','900':'IRON','1100':'LAWT','1200':'PROC','1300':'ROME','1400':'SPT','1500':'UPPER','1600':'WIND','1700':'WASH','2100':'PERRY'};
+  Object.keys(fdHome).forEach(n=>add('E-'+n,'FIRE',FDN[n],fdHome[n],n==='900'?'IRON FIRE':'FD44DISP',{fd:n,vol:n!=='900'}));
+  add('L-900','FIRE',FDN['900'],'IRON','IRON FIRE',{fd:'900',vol:false});
+  // EMS
+  [['Medic 1','COAL'],['Medic 2','IRON'],['Medic 3','SPT'],['Medic 4','CHES'],['Medic 5','PROC'],['Medic 6','LAWT'],['Medic 7','WIND']].forEach(([i,h])=>add(i,'EMS','Lawrence Co. EMS',h,'EMS44DSP'));
+  return U;
+}
+
+/* =================== STATE =================== */
+let S;
+function initDuty(st){st.units.forEach(u=>{if(VILLAGE.includes(u.agency)&&chance(.45))u.st='OFF'})}
+function newState(){
+  const diff=$('#optDiff').value;
+  return {t:0,running:true,paused:false,score:0,len:+$('#optLen').value,diff,
+    rate:{easy:85,normal:55,hard:32}[diff],
+    voice:$('#optVoice').value,sfx:$('#optSfx').value==='1',
+    lines:[null,null,null,null],active:null,calls:[],incidents:[],units:mkUnits(),radio:[],ev:[],
+    nextCall:4,nextDuty:ri(120,200),nextSelf:ri(70,110),nextEmerg:diff==='easy'?99999:ri(400,700),emergDone:false,incSeq:2026001,callSeq:1,
+    tg:'ALL',tab:'pPhone',db:{per:{},veh:{},vin:{}},leads:[],lseq:1,cadView:'inc',cmdLog:[],
+    st:{calls:0,ans:[],answered15:0,abandoned:0,p1disp:[],acks:[],missedAcks:0,codesRight:0,codesTot:0,xferOk:0,xferBad:0,dup:0}};
+}
+function note(t){const d=document.createElement('div');d.className='minus';d.textContent=t;$('#toast').appendChild(d);setTimeout(()=>d.remove(),3000);post({type:'toast',cls:'minus',text:t})}
+function pts(n,why){
+  S.score+=n;S.ev.push({t:S.t,n,why});
+  const d=document.createElement('div');d.className=n>=0?'plus':'minus';d.textContent=(n>=0?'+':'')+n+'  '+why;
+  $('#toast').appendChild(d);setTimeout(()=>d.remove(),3200);
+  while($('#toast').children.length>3)$('#toast').firstChild.remove();
+  post({type:'toast',cls:d.className,text:d.textContent});
+}
+
+/* =================== AUDIO =================== */
+let AC;
+function ac(){if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}return AC}
+function tone(f,dur,when=0,vol=.08,type='sine'){
+  if(!S||!S.sfx)return;const c=ac();if(!c)return;
+  const o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.value=f;
+  const t0=c.currentTime+when;g.gain.setValueAtTime(0,t0);g.gain.linearRampToValueAtTime(vol,t0+.02);g.gain.setValueAtTime(vol,t0+dur-.03);g.gain.linearRampToValueAtTime(0,t0+dur);
+  o.connect(g);g.connect(c.destination);o.start(t0);o.stop(t0+dur+.05);
+}
+const sfx={
+  ring(){tone(800,.25,0,.07,'square');tone(1000,.25,.28,.07,'square');tone(800,.25,.56,.07,'square')},
+  chirp(){tone(1800,.07,0,.05);tone(2400,.06,.08,.04)},
+  key(){tone(1200,.12,0,.05)},
+  pager(){const a=ri(400,1100),b=ri(400,1100);tone(a,1,0,.06);tone(b,3,1,.06)},
+  emerg(){for(let i=0;i<6;i++){tone(1400,.15,i*.3,.09,'square');tone(900,.15,i*.3+.15,.09,'square')}},
+  bad(){tone(220,.3,0,.07,'sawtooth')}
+};
+// speech
+const speakQ=[];let speaking=false,voices=[];
+function loadVoices(){try{voices=speechSynthesis.getVoices().filter(v=>/^en(-|_)US/i.test(v.lang))}catch(e){}}
+if('speechSynthesis' in window){loadVoices();speechSynthesis.onvoiceschanged=loadVoices}
+function say(text,kind){
+  if(!S||!('speechSynthesis' in window))return;
+  if(S.voice==='0')return; if(S.voice==='r'&&kind!=='radio')return;
+  text=text.replace(/\b([A-Z]{3}) (\d{4})\b/g,(m,a,b)=>a.split('').join(' ')+' '+b.split('').join(' ')).replace(/\b911\b/g,'nine one one').replace(/\b904\b/g,'nine oh four').replace(/\b([1-9])0([1-9])\b/g,'$1 oh $2').replace(/\b([1-9])([1-9]\d)\b/g,'$1 $2').replace(/\(.*?\)/g,'').replace(/(\b[A-Z]{1,4})-(\d+)/g,'$1 $2').replace(/E (\d)/g,'Engine $1').replace(/\bL (\d)/g,'Ladder $1').replace(/\bLC (\d)/g,'L C $1').replace(/\bSR (\d)/g,'State Route $1').replace(/\bUS (\d)/g,'U S $1').trim();
+  if(!text)return;
+  speakQ.push({text,kind});if(speakQ.length>4)speakQ.splice(0,speakQ.length-4);pump();
+}
+function pump(){
+  if(speaking||!speakQ.length)return;const {text,kind}=speakQ.shift();
+  const u=new SpeechSynthesisUtterance(text);
+  if(voices.length){u.voice=kind==='radio'?voices[0]:(voices[1]||voices[0])}
+  u.rate=kind==='radio'?1.15:1.05;u.pitch=kind==='radio'?.9:1.15;u.volume=.9;
+  speaking=true;if(kind==='radio')sfx.key();
+  u.onend=u.onerror=()=>{speaking=false;if(kind==='radio')sfx.chirp();setTimeout(pump,150)};
+  try{speechSynthesis.speak(u)}catch(e){speaking=false}
+}
+
+/* =================== CALL GENERATION =================== */
+function pickScenario(){
+  const tot=SC.reduce((s,x)=>s+x.w,0);let r=Math.random()*tot;
+  for(const s of SC){r-=s.w;if(r<=0)return s}return SC[0];
+}
+function spawnCall(forced){
+  const line=S.lines.findIndex(l=>!l);if(line<0)return false;
+  let sc=forced&&forced.sc||pickScenario(),zk,a,dupOf=null;
+  if(forced&&forced.dupOf){dupOf=forced.dupOf;zk=dupOf.zk;}
+  else{const zs=sc.zones||ZK;zk=pick(zs);}
+  a={zk,addr:dupOf?dupOf.addrLoose:addrFor(zk,sc.hwy),name:person(),cb:phoneNum()};
+  const wireless=sc.wireless||sc.hwy||chance(.45)||!!dupOf;
+  const c={id:S.callSeq++,line,sc,a,zk,state:'ring',ringAt:S.t,ans:null,asked:new Set(),notes:[],tx:[],wireless,dupOf,incId:null,done:false,
+    special:new Set(),released:null,cbDone:false};
+  if(dupOf){c.dupInc=dupOf.incId}
+  // ALI
+  if(sc.xfer){c.ali=`CLASS: WPH2  ${a.cb}\nCARRIER: ${pick(['VERIZON','AT&T MOBILITY','T-MOBILE'])}\nTOWER: ${pick(['IRONTON','SOUTH POINT','COAL GROVE'])} SECT ${ri(1,3)}\nLAT/LON: ${sc.xfer.includes('KY')?'38.47, -82.64':sc.xfer.includes('WV')?'38.42, -82.44':'38.73, -82.99'}  UNC ${ri(40,300)}m\nESN: (none — outside county)`;
+    c.trueZone=null;}
+  else if(wireless){c.ali=`CLASS: WPH2  ${a.cb}\nCARRIER: ${pick(['VERIZON','AT&T MOBILITY','T-MOBILE'])}\nTOWER: ${Z[zk].n.toUpperCase()} AREA SECT ${ri(1,3)}\nLAT/LON: ${(Z[zk].lat+rnd(-.006,.006)).toFixed(4)}, ${(Z[zk].lon+rnd(-.006,.006)).toFixed(4)}  UNC ${ri(15,900)}m\nNEAREST: ${Z[zk].n}`;}
+  else{c.ali=`CLASS: RESD  ${a.cb}\nNAME: ${a.name.split(' ')[1].toUpperCase()}, ${a.name.split(' ')[0].toUpperCase()}\nADDR: ${a.addr.toUpperCase()}\nCOMM: ${Z[zk].n.toUpperCase()}  ESN ${ZK.indexOf(zk)+101}\nFD: ${FDN[Z[zk].fd]} · LE: ${Z[zk].le}`;}
+  S.lines[line]=c;S.calls.push(c);S.st.calls++;
+  return true;
+}
+function tx(c,who,text){c.tx.push({who,text});if(who==='caller'&&c===S.active)say(text,'caller')}
+
+/* =================== PHONE ACTIONS =================== */
+function answer(c){
+  if(S.active&&S.active!==c&&S.active.state==='active'){S.active.state='hold';tx(S.active,'sys','Placed on hold.')}
+  if(c.state==='ring'){
+    c.ans=S.t;const at=S.t-c.ringAt;S.st.ans.push(at);if(at<=15)S.st.answered15++;
+    if(at<=10)pts(5,`Answered line ${c.line+1} in ${Math.round(at)}s`);else if(at>20)pts(-5,`Line ${c.line+1} rang ${Math.round(at)}s`);
+    tx(c,'you',c.sc.id.startsWith('admin')?'Lawrence County 911, this is a recorded line.':'911, what is the address of your emergency?');
+    tx(c,'caller',c.dupOf?`I'm calling about the ${NAT[c.dupOf.nat].d.toLowerCase()} near ${c.a.addr}!`:c.sc.open(c.a));
+    if(c.sc.hangsUp){c.state='dropped';tx(c,'sys','Caller disconnected. Use Call Back.');}
+    else c.state='active';
+  }else if(c.state==='hold'){c.state='active';tx(c,'sys','Off hold.')}
+  S.active=c;render();
+}
+function ask(c,k){
+  if(c.state!=='active')return;
+  const q=Q.find(x=>x[0]===k);tx(c,'you',q[1]);
+  let r;
+  if(c.dupOf){r={address:`Near ${c.a.addr}.`,what:`It's the same ${NAT[c.dupOf.nat].d.toLowerCase()}, somebody else said they already called.`,callback:`${c.a.cb}.`,name:`${c.a.name}.`}[k]||"I don't know, I'm just driving by."}
+  else{const f=c.sc.ans[k];r=f?f(c.a):"I... I don't know.";if(r==='')r="I don't know.";}
+  tx(c,'caller',r);
+  if(!c.asked.has(k)){c.asked.add(k);
+    const lab={address:'LOC',callback:'CB#',what:'NAT',injuries:'INJ',conscious:'PT',weapons:'WPN',hazards:'HAZ',suspect:'DESC',name:'RP',stay:''}[k];
+    if(lab&&!r.startsWith('(no')) c.notes.push(`${lab}: ${r}`);
+    if(k==='address')c.addrKnown=true;
+  }
+  render();
+}
+function special(c,sp){
+  if(c.state!=='active'||c.special.has(sp.k))return;c.special.add(sp.k);
+  tx(c,'you',sp.l+'.');tx(c,'caller',sp.r);c.notes.push(`>> ${sp.l}`);pts(sp.pts,sp.l);render();
+}
+function hold(c){if(c.state==='active'){c.state='hold';tx(c,'sys','Placed on hold.');S.active=null;render()}}
+function transfer(c,dest){
+  if(!dest)return;tx(c,'you',`Stay on the line, I'm transferring you to ${dest}.`);tx(c,'sys',`Transferred to ${dest}.`);
+  if(c.sc.xfer===dest){if(!c.asked.has('address')){pts(-3,'Transferred without verifying location')}pts(15,`Correct transfer to ${dest}`);S.st.xferOk++;}
+  else{pts(-15,`Wrong transfer (${dest})`);S.st.xferBad++;}
+  c.xferred=dest;release(c,true);
+}
+function callBack(c){
+  if(c.cbDone)return;c.cbDone=true;c.state='active';S.active=c;
+  tx(c,'sys',`Calling back ${c.a.cb}...`);
+  if(c.sc.callback){tx(c,'caller',c.sc.callback);if(c.sc.cbOk===0)c.notes.push('CALLBACK: no answer — open line, female yelling "Stop!"');else c.notes.push('CALLBACK: '+c.sc.callback)}
+  else if(c.abandonedFrom){tx(c,'caller',"Oh thank God, I've been trying to get through! "+c.sc.open(c.a));c.abandonedFrom=false}
+  pts(4,'Called back abandoned/dropped call');
+  if(c.sc.callback)c.state='dropped';
+  render();
+}
+function release(c,silent){
+  if(!silent)tx(c,'sys','Call released.');
+  c.state='ended';c.released=S.t;S.lines[c.line]=null;if(S.active===c)S.active=null;
+  // requirements
+  if(!c.dupOf&&!c.xferred&&!c.sc.noDispatch&&!c.sc.hangsUp&&!c.sc.xfer){let got=0;
+    c.sc.req.forEach(k=>{if(c.asked.has(k))got++;else pts(-4,`Call #${c.id}: never asked "${Q.find(q=>q[0]===k)[1]}"`)});
+    if(got)pts(got*2,`Call #${c.id}: ${got} key question${got>1?'s':''} asked`);}
+  if(c.dupOf&&!c.incId)pts(-3,`Duplicate caller #${c.id} not linked to the incident`);
+  if(c.sc.xfer&&!c.xferred){pts(-10,`Call #${c.id} was out of county and never transferred`)}
+  if(c.sc.noDispatch&&!c.incId){
+    if(c.sc.id==='pocket'&&!c.cbDone)pts(-5,'Pocket dial released without a callback');
+    else pts(8,`Handled call #${c.id} without unnecessary dispatch`);
+  }
+  render();
+}
+
+/* =================== CAD =================== */
+function openNewInc(c){
+  const z=c&&(c.addrKnown||!c.wireless)&&c.trueZone!==null?c.zk:'';
+  const loc=c&&!c.sc.xfer&&!c.dupOf?(c.addrKnown||!c.wireless?c.a.addr:''):'';
+  const dupList=S.incidents.filter(i=>i.status!=='closed'&&(!c||i.zk===c.zk));
+  modal(`<h3>Create incident ${c?'— from call #'+c.id:''}</h3>
+  <div class="row"><div><label class="f">Nature code</label><select id="mNat"><option value="">— select —</option>${Object.entries(NAT).filter(([k])=>k!=='TS').map(([k,v])=>`<option value="${k}">${k} — ${v.d}${BSSA[k]?' ('+bw(BSSA[k])+')':''}</option>`).join('')}</select></div>
+  <div style="max-width:120px"><label class="f">Priority</label><select id="mPri"><option value="1">P1</option><option value="2" selected>P2</option><option value="3">P3</option></select></div></div>
+  <div class="row" style="margin-top:8px"><div><label class="f">Location</label><input id="mLoc" value="${esc(loc)}" placeholder="Ask the caller for the address"></div>
+  <div><label class="f">Response zone</label><select id="mZone"><option value="">— select —</option>${ZK.map(k=>`<option value="${k}" ${k===z?'selected':''}>${Z[k].n}</option>`).join('')}</select></div></div>
+  <label class="f" style="margin-top:8px">Narrative</label><textarea id="mNotes" rows="5">${esc(c?c.notes.join('\n'):'')}</textarea>
+  ${c&&dupList.length?`<div class="card" style="border-color:#854d0e"><b style="color:var(--amber)">Possible duplicates in this area</b>${dupList.map(i=>`<div class="row" style="align-items:center;margin-top:6px"><span class="mono" style="flex:3">#${i.id} ${i.nat} · ${esc(i.loc)}</span><button onclick="linkDup(${c.id},${i.id})">Add call to #${i.id}</button></div>`).join('')}</div>`:''}
+  <div class="acts" style="margin-top:10px"><button onclick="closeModal()">Cancel</button><button class="pri" onclick="createInc(${c?c.id:'null'},false)">Create</button><button class="go" onclick="createInc(${c?c.id:'null'},true)">Create & assign units</button></div>`);
+}
+function linkDup(cid,iid){
+  const c=S.calls.find(x=>x.id===cid),i=S.incidents.find(x=>x.id===iid);
+  c.incId=i.id;i.notes+=`\n[2nd caller #${c.id}] `+c.notes.join(' | ');
+  if(c.dupOf&&c.dupOf.incId===i.id){pts(10,'Linked duplicate caller to existing incident');S.st.dup++}
+  else pts(-5,'Linked call to an unrelated incident');
+  closeModal();render();
+}
+function createInc(cid,assign){
+  const nat=$('#mNat').value,pri=+$('#mPri').value,zk=$('#mZone').value,loc=$('#mLoc').value.trim();
+  if(!nat||!zk||!loc){note('Nature code, location, and response zone are required.');return}
+  const c=cid?S.calls.find(x=>x.id===cid):null;
+  const inc={id:S.incSeq++,nat,pri,zk,loc,notes:$('#mNotes').value,created:S.t,units:[],status:'pend',call:c,graded:false,firstDisp:null};
+  S.incidents.unshift(inc);
+  if(c){c.incId=inc.id;
+    if(!c.dupOf){c.incRef=inc}
+    // grading of code
+    if(c.dupOf){pts(-10,'Created a duplicate incident for the same emergency')}
+    else if(c.sc.noDispatch||c.sc.xfer){if(nat!=='INFO')pts(-8,`Call #${c.id} didn't need a ${nat} incident`)}
+    else{S.st.codesTot++;
+      if(nat===c.sc.nat){pts(10,`Correct nature code ${nat}`);S.st.codesRight++}
+      else pts(-6,`Nature code ${nat}; expected ${c.sc.nat}`);
+      const exp=NAT[c.sc.nat].p;if(pri!==exp)pts(-3,`Priority P${pri}; expected P${exp}`);
+      if(zk!==c.zk)pts(-8,`Wrong response zone (${Z[zk].n}); call was in ${Z[c.zk].n}`);
+    }
+  }
+  if(nat==='INFO'){inc.status='closed';inc.closedAt=S.t}
+  // schedule duplicate caller
+  if(c&&!c.dupOf&&c.sc.dupChance&&chance(c.sc.dupChance)){
+    c.dupSched=S.t+ri(15,40);c.addrLoose=loc.replace(/^(\d)\d*\s/,'$100 block of ');
+  }
+  closeModal();render();
+  if(assign&&nat!=='INFO')openAssign(inc.id);
+}
+function recommend(inc){
+  const need=NAT[inc.nat].need,z=Z[inc.zk],av=S.units.filter(u=>u.st==='AV');const rec=[];
+  const near=(arr)=>arr.sort((a,b)=>dist(a.pos,z)-dist(b.pos,z))[0];
+  if(need.includes('LE')){
+    let le=av.filter(u=>u.type==='LE'&&u.agency===z.le);
+    if(!le.length)le=av.filter(u=>u.type==='LE'&&u.agency==='LCSO');
+    if(!le.length)le=av.filter(u=>u.type==='LE');
+    const u=near(le);if(u)rec.push(u.id);
+    if(['DOM','BURG'].includes(inc.nat)){const u2=near(av.filter(x=>x.type==='LE'&&x.agency!=='OSHP'&&!rec.includes(x.id)));if(u2)rec.push(u2.id)}
+    if(['MVAI','MVA'].includes(inc.nat)&&!z.town){const tr=near(av.filter(x=>x.agency==='OSHP'));if(tr&&!rec.includes(tr.id)){rec.push(tr.id)}}
+  }
+  if(need.includes('FIRE')){
+    let f=av.filter(u=>u.type==='FIRE'&&u.fd===z.fd);
+    if(!f.length)f=av.filter(u=>u.type==='FIRE');
+    const u=near(f);if(u)rec.push(u.id);
+    if(inc.nat==='SF'){const m=near(av.filter(x=>x.type==='FIRE'&&!rec.includes(x.id)&&x.fd!==z.fd));if(m)rec.push(m.id)}
+  }
+  if(need.includes('EMS')){const u=near(av.filter(x=>x.type==='EMS'));if(u)rec.push(u.id)}
+  return rec;
+}
+function openAssign(iid){
+  const inc=S.incidents.find(i=>i.id===iid);const rec=recommend(inc);const z=Z[inc.zk];
+  const av=S.units.filter(u=>u.st==='AV').sort((a,b)=>dist(a.pos,z)-dist(b.pos,z));
+  const grp=t=>av.filter(u=>u.type===t).map(u=>`<label class="chk ${rec.includes(u.id)?'rec':''}"><input type="checkbox" value="${u.id}" ${rec.includes(u.id)?'checked':''}><b style="width:76px">${u.id}</b><span style="flex:1" class="dim">${esc(u.ag)}${u.vol?' (vol.)':''}</span><span>${dist(u.pos,z).toFixed(1)} mi · ETA ${Math.round(eta(u,z)/60*10)/10||'<1'}m</span></label>`).join('')||'<div class="dim" style="padding:6px">None available</div>';
+  modal(`<h3>Assign units — #${inc.id} ${inc.nat} · ${esc(inc.loc)} (${z.n})</h3>
+  <div class="dim" style="font-size:12px;margin-bottom:6px">Needs: ${NAT[inc.nat].need.join(', ')||'nothing'} · Home FD: ${FDN[z.fd]} (${z.fd}) · Jurisdiction: ${z.le}${z.le!=='LCSO'&&!S.units.some(u=>u.agency===z.le&&u.st==='AV')?' <b style="color:var(--amber)">— NUA, send a deputy</b>':''}. Green = CAD recommendation.</div>
+  <div class="ugh">Law enforcement</div>${grp('LE')}<div class="ugh">Fire</div>${grp('FIRE')}<div class="ugh">EMS</div>${grp('EMS')}
+  <div class="acts" style="margin-top:10px"><button onclick="closeModal()">Cancel</button><button class="go" onclick="doAssign(${iid})">Dispatch selected</button></div>`);
+}
+function eta(u,z){return 18+dist(u.pos,z)*5.5}
+function doAssign(iid){
+  const inc=S.incidents.find(i=>i.id===iid);
+  const ids=[...document.querySelectorAll('#mbox input[type=checkbox]:checked')].map(x=>x.value);
+  if(!ids.length){note('Select at least one unit.');return}
+  closeModal();dispatchUnits(inc,ids);
+}
+function dispatchUnits(inc,ids){
+  const z=Z[inc.zk];const fire=[];
+  ids.forEach(id=>{const u=S.units.find(x=>x.id===id);if(!u||u.st!=='AV')return;
+    u.st='DP';u.inc=inc.id;u.dpAt=S.t;delete u.mv;inc.units.push(u.id);
+    u.noResp=u.vol&&chance(.18);
+    u.next=S.t+(u.type==='FIRE'?(u.vol?ri(25,60):ri(8,15)):ri(5,12));
+    if(u.type==='FIRE')fire.push(u);
+  });
+  if(inc.status==='pend')inc.status='disp';
+  const first=inc.firstDisp===null;if(first)inc.firstDisp=S.t;
+  // outgoing radio
+  const byTg={};ids.forEach(id=>{const u=S.units.find(x=>x.id===id);(byTg[u.tg]=byTg[u.tg]||[]).push(u.id)});
+  if(fire.length){sfx.pager();}
+  Object.entries(byTg).forEach(([tg,list])=>{
+    const isF=tg==='FD44DISP'||tg==='IRON FIRE';
+    const txt=isF?`911 to ${list.map(i=>'Station '+i.slice(2)).join(', ')}: respond ${NAT[inc.nat].d}, ${inc.loc}, ${z.n}.`
+                 :tg==='SO44DSP'?`${list.join(', ')}, 904. ${BSSA[inc.nat]?bw(BSSA[inc.nat])+', '+NAT[inc.nat].d.toLowerCase():NAT[inc.nat].d}, ${inc.loc}, ${z.n}.`
+                 :`${list.join(', ')}: respond ${inc.loc}, ${z.n}, for a ${NAT[inc.nat].d.toLowerCase()}.`;
+    radioOut(tg,txt);
+  });
+  if(first)gradeDispatch(inc);
+  render();
+}
+function gradeDispatch(inc){
+  const c=inc.call;if(!c||c.dupOf||c.sc.noDispatch||c.sc.xfer){if(c&&(c.sc.noDispatch)&&c.sc.id!=='hangup')pts(-10,'Dispatched units to a call that needed none');return}
+  const need=NAT[c.sc.nat].need;const types=new Set(inc.units.map(id=>S.units.find(u=>u.id===id).type));
+  need.forEach(n=>{if(types.has(n))pts(6,`${n} dispatched`);else pts(-12,`Missing ${n} on #${inc.id} (${c.sc.nat})`)});
+  ['LE','FIRE','EMS'].forEach(n=>{if(types.has(n)&&!need.includes(n)&&!(n==='EMS'&&['DOM'].includes(c.sc.nat)))pts(-3,`${n} not needed on ${c.sc.nat}`)});
+  const z=Z[c.zk];
+  if(need.includes('FIRE')){if(inc.units.some(id=>S.units.find(u=>u.id===id).fd===z.fd))pts(6,`Home department ${z.fd} toned`);else pts(-6,`Home department (${FDN[z.fd]}) not sent`)}
+  if(need.includes('LE')){const ag=inc.units.map(id=>S.units.find(u=>u.id===id).agency);
+    if(ag.includes(z.le))pts(4,`Correct jurisdiction (${z.le})`);
+    else if(z.le!=='LCSO'){const free=S.units.some(u=>u.agency===z.le&&u.st==='AV');
+      if(free)pts(-4,`${z.le} had a unit available in ${z.n}`);
+      else if(ag.includes('LCSO'))pts(5,`${z.le} NUA — deputy covered ${z.n}`);}}
+  const pt=S.t-(c.ans??c.ringAt);
+  if(c.sc.nat&&NAT[c.sc.nat].p===1){S.st.p1disp.push(pt);
+    if(pt<=60)pts(15,`P1 dispatched in ${Math.round(pt)}s`);else if(pt<=90)pts(10,`P1 dispatched in ${Math.round(pt)}s`);else if(pt<=150)pts(3,`P1 dispatched in ${Math.round(pt)}s`);else pts(-8,`P1 took ${Math.round(pt)}s to dispatch`);}
+}
+function closeInc(iid){
+  const inc=S.incidents.find(i=>i.id===iid);
+  if(inc.units.some(id=>{const u=S.units.find(x=>x.id===id);return u.inc===inc.id&&u.st!=='AV'})){note('Units are still assigned. They must clear first.');return}
+  inc.status='closed';inc.closedAt=S.t;render();
+}
+
+/* =================== RADIO =================== */
+const DCS={LE:'904',FIRE:'911',EMS:'Dispatch'};
+const tgCS=tg=>tg==='EMS44DSP'?'Dispatch':(tg==='FD44DISP'||tg==='IRON FIRE')?'911':tg==='SO44DSP'?'904':'Lawrence County';
+function radioIn(u,text,opts={}){
+  if(u&&!opts.emerg)text=`${u.agency==='OSHP'?'Lawrence County':DCS[u.type]}, ${text.startsWith(u.id)?'':u.id+', '}${text}`;
+  const m=Object.assign({id:Math.random().toString(36).slice(2),t:S.t,from:u?u.id:'',tg:u?u.tg:'SYS',text,dir:'in',need:true,acked:false,due:S.t+20,actions:[]},opts);
+  S.radio.unshift(m);if(S.radio.length>120)S.radio.pop();
+  if(!opts.silent){sfx.chirp();say(m.text,'radio')}
+  render();return m;
+}
+function radioOut(tg,text){S.radio.unshift({id:Math.random().toString(36).slice(2),t:S.t,from:tgCS(tg),tg,text,dir:'out',need:false});say(text,'radio')}
+function ack(mid,silent){
+  const m=S.radio.find(x=>x.id===mid);if(!m||m.acked)return;m.acked=true;m.need=false;
+  const dt=S.t-m.t;S.st.acks.push(dt);
+  if(!silent){if(dt<=8)pts(2,'Quick radio acknowledgment');radioOut(m.tg,`${m.from}, copy.`);}
+  render();
+}
+function act(mid,k){
+  const m=S.radio.find(x=>x.id===mid);if(!m)return;const u=S.units.find(x=>x.id===m.from);
+  const a=m.actions.find(x=>x.k===k);if(!a)return;
+  a.fn(u,m);m.actions=m.actions.filter(x=>x.k!==k&&!x.group||x.group!==a.group);
+  if(!m.acked)ack(mid,true);
+  if(!m.actions.length)m.need=false;
+  render();
+}
+function unitReq(u){
+  const inc=S.incidents.find(i=>i.id===u.inc);if(!inc)return;
+  const kinds=[];
+  if(['MVAI','MVA','VF','HAZ'].includes(inc.nat))kinds.push('wrecker');
+  if(['DOM','BURG','SUSP','TS'].includes(inc.nat))kinds.push('plate','backup');
+  if(['DOM'].includes(inc.nat))kinds.push('ems');
+  if(!kinds.length)return;
+  const k=pick(kinds);
+  if(k==='plate'){
+    if(chance(.5))plateReq(u);else driverReq(u);
+  }else if(k==='wrecker'){
+    radioIn(u,`Start me a Signal 31, ${inc.loc}.`,{actions:[{k:'wr',l:'Call rotation wrecker (Signal 31)',fn:(u)=>{pts(4,'Wrecker requested');radioOut(u.tg,`${u.id}, 904, Signal 31 notified, ETA about 20 minutes.`)}}]});
+  }else if(k==='backup'){
+    radioIn(u,`Send me another unit, Code 10, ${inc.loc}.`,{due:S.t+12,actions:[{k:'bu',l:'Send nearest LE',fn:(u)=>sendBackup(u,inc,1)}]});
+  }else if(k==='ems'){
+    radioIn(u,`Start me a Signal 29, female with a facial injury. Scene is secure.`,{actions:[{k:'ems',l:'Send nearest medic (Signal 29)',fn:()=>{const z=Z[inc.zk];const m=S.units.filter(x=>x.type==='EMS'&&x.st==='AV').sort((a,b)=>dist(a.pos,z)-dist(b.pos,z))[0];if(m){dispatchUnits(inc,[m.id]);pts(6,'EMS sent on officer request')}else pts(-2,'No EMS available')}}]});
+  }
+}
+function sendBackup(u,inc,n){
+  if(!inc)return;const z=Z[inc.zk];
+  const av=S.units.filter(x=>x.type==='LE'&&x.st==='AV').sort((a,b)=>dist(a.pos,z)-dist(b.pos,z)).slice(0,n);
+  if(!av.length){pts(-2,'No LE units available for backup');radioOut(u.tg,`${u.id}, no units available at this time, I'll advise.`);return}
+  dispatchUnits(inc,av.map(x=>x.id));pts(6,'Backup sent');
+}
+function statusCheck(){
+  const id=$('#pttUnit').value;const u=S.units.find(x=>x.id===id);if(!u)return;
+  radioOut(u.tg,`${u.id}, status check.`);
+  setTimeout(()=>{if(!S.running)return;const st={AV:'Signal 33',DP:'en route',ER:'en route',OS:'still on scene, everything is fine',TR:'transporting',AH:'at the hospital'}[u.st]||'okay';
+    radioIn(u,`I'm ${st}.`,{need:false,silent:false});
+    if(u.st==='OS'&&u.type==='LE'&&S.t-u.osAt>90){pts(3,'Officer safety status check')}},2200);
+}
+const VILLAGE=['HRPD','CGPD','SPPD','CPD','PPD','APD'];
+function dutyChange(){
+  const off=S.units.filter(u=>VILLAGE.includes(u.agency)&&u.st==='OFF');
+  const on=S.units.filter(u=>VILLAGE.includes(u.agency)&&u.st==='AV');
+  if(off.length&&(chance(.55)||!on.length)){const u=pick(off);u.st='AV';u.pos={lat:Z[u.home].lat,lon:Z[u.home].lon};radioIn(u,`${u.id}, Signal 33, on duty.`)}
+  else if(on.length){const u=pick(on);u.st='OFF';radioIn(u,`${u.id}, Signal 37, end of shift.`)}
+}
+function nuaList(){return VILLAGE.filter(a=>!S.units.some(u=>u.agency===a&&u.st==='AV'))}
+function selfInit(){
+  const u=pick(S.units.filter(x=>x.type==='LE'&&x.st==='AV'));if(!u)return;
+  const zk=u.home;const z=Z[zk];const V=fieldVehicle();const p=V.plate.slice(0,3)+' '+V.plate.slice(3);const loc=z.hwy?`${z.hwy} near mile marker ${ri(1,24)}`:addrFor(zk);
+  const m=radioIn(u,`Code 86, traffic stop, ${loc}, Ohio ${p}, ${V.color} ${MAKE[V.vma]} ${V.vmo[0]+V.vmo.slice(1).toLowerCase()}, ${(n=>n+' occupant'+(n>1?'s':''))(ri(1,3))}.`,{due:S.t+12,
+    actions:[{k:'ts',l:'Create TS incident & put unit on scene',fn:(u)=>{
+      const inc={id:S.incSeq++,nat:'TS',pri:3,zk,loc,notes:`Self-initiated by ${u.id}. Plate ${p}.`,created:S.t,units:[u.id],status:'disp',call:null,firstDisp:S.t};
+      S.incidents.unshift(inc);u.st='OS';u.inc=inc.id;u.osAt=S.t;u.next=S.t+ri(60,140);u.pos={lat:z.lat,lon:z.lon};
+      pts(6,'Traffic stop entered in CAD');radioOut(u.tg,`${u.id}, copy your traffic stop.`);
+      setTimeout(()=>{if(S.running&&u.st==='OS'&&u.inc===inc.id)plateReq(u,V)},ri(6000,12000));
+    }}]});
+  m.selfTs=true;
+}
+function emergencyAlert(){
+  const u=pick(S.units.filter(x=>x.type==='LE'&&x.st==='OS'));if(!u)return false;
+  S.emergDone=true;sfx.emerg();
+  const inc=S.incidents.find(i=>i.id===u.inc);
+  radioIn(u,`EMERGENCY ALERT — Code 44, officer in distress. ${u.id} activated emergency button. Last known: ${inc?inc.loc:'unknown'}. (Open mic: shouting, sounds of a struggle)`,{emerg:true,due:S.t+10,silent:true,
+    actions:[{k:'em',l:'Acknowledge & send all available',fn:(u,m)=>{const dt=S.t-m.t;radioOut(u.tg,`Signal 99, Signal 99. All units, Code 44, ${u.id} at ${inc?inc.loc:'last known location'}. All available units respond.`);sendBackup(u,inc,3);pts(dt<=10?25:dt<=25?12:2,`Emergency handled in ${Math.round(dt)}s`);
+      setTimeout(()=>{if(S.running)radioIn(u,"I'm okay, one in custody. You can slow the other units down. Clear the Signal 99.")},9000)}}]});
+  say(`Emergency, emergency. ${u.id} emergency activation.`,'radio');
+  return true;
+}
+
+/* =================== LEADS (simulated) =================== */
+// Simulated Ohio LEADS / NCIC / NLETS terminal. Message keys RQ, DQ, QV, QW, QR, YQ/YR follow NCIC/NLETS naming;
+// the response layouts, records, ORIs and people are fictional.
+function srng(str){let h=2166136261>>>0;for(const ch of String(str)){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)>>>0}
+  return()=>{h=(h+0x6D2B79F5)>>>0;let t=h;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296}}
+const FM=['GARY','MICHAEL','JEFFREY','RICKY','JOSHUA','BOBBY','DALE','TRAVIS','WAYNE','DARRELL','CODY','DUSTIN'];
+const FF=['LINDA','BRENDA','TAMMY','DEBORAH','AMANDA','HEATHER','CRYSTAL','KAYLA','SHERRY','ASHLEY','BRITTANY','MISTY'];
+const LN=['ADKINS','WELLS','WARD','DELONG','MULLINS','COLLINS','KITTS','HALL','THOMPSON','BRAMMER','WEBB','CHAPMAN','FRALEY','MAYNARD','HOLLEY','LAMBERT','ROWE','DILLOW'];
+const TOWNS=[['IRONTON','45638'],['COAL GROVE','45638'],['SOUTH POINT','45680'],['PROCTORVILLE','45669']];
+const STREETS=['S 3RD ST','S 4TH ST','PARK AVE','LANE ST','STATE ST','COUNTY ROAD 120','TOWNSHIP ROAD 214','COUNTY ROAD 31'];
+const VEHS=[['CHEV','SILVERADO','PK'],['FORD','F150','PK'],['DODG','RAM','PK'],['HOND','CIVIC','4D'],['TOYT','CAMRY','4D'],['JEEP','CHEROKEE','UT'],['NISS','ALTIMA','4D'],['CHEV','EQUINOX','UT'],['FORD','ESCAPE','UT'],['GMC','SIERRA','PK']];
+const VCO=[['BLK','black'],['WHI','white'],['SIL','silver'],['GRY','gray'],['RED','red'],['BLU','blue'],['MAR','maroon']];
+const MAKE={CHEV:'Chevy',FORD:'Ford',DODG:'Dodge',HOND:'Honda',TOYT:'Toyota',JEEP:'Jeep',NISS:'Nissan',GMC:'GMC'};
+const WARR=[
+ {t:'15M',d:'FAILURE TO APPEAR — DRIVING UNDER SUSPENSION',c:'LAWRENCE CO MUNICIPAL COURT',ori:'OH0440100',ext:'OHIO ONLY'},
+ {t:'15M',d:'FAILURE TO PAY FINES AND COSTS',c:'IRONTON MUNICIPAL COURT',ori:'OH0440300',ext:'OHIO ONLY'},
+ {t:'15F',d:'PROBATION VIOLATION — POSSESSION OF DRUGS F5',c:'LAWRENCE CO COMMON PLEAS',ori:'OH0440000',ext:'FULL'},
+ {t:'15F',d:'THEFT F5 — INDICTMENT',c:'LAWRENCE CO COMMON PLEAS',ori:'OH0440000',ext:'FULL'},
+ {t:'15F',d:'FUGITIVE — BURGLARY',c:'BOYD CO KY CIRCUIT COURT',ori:'KY0100000',ext:'FULL'}];
+const HIST=[['4511.19','OVI'],['2919.25','DOMESTIC VIOLENCE'],['2925.11','POSSESSION OF DRUGS'],['2913.02','THEFT'],['2911.12','BURGLARY'],['2903.13','ASSAULT'],['4510.11','DRIVING UNDER SUSPENSION']];
+const tc=t=>t.toLowerCase().replace(/\b[a-z]/g,c=>c.toUpperCase()).replace(/\bKy\b/,'KY');
+const pad=(n,l=2)=>String(n).padStart(l,'0');
+const nDob=d=>{const x=String(d).replace(/\D/g,'');return x.length===8?x.slice(0,2)+'/'+x.slice(2,4)+'/'+x.slice(4):String(d).trim()};
+const perKey=(l,f,d)=>(String(l).trim()+'|'+String(f).trim()+'|'+nDob(d)).toUpperCase();
+const vKey=(p,s)=>(String(s||'OH')+'|'+String(p).replace(/\s/g,'')).toUpperCase();
+function mkPerson(rng,o={}){
+  const pk=a=>a[Math.floor(rng()*a.length)];
+  const sex=o.sex||(rng()<.5?'M':'F');
+  const P={last:(o.last||pk(LN)).toUpperCase(),first:(o.first||pk(sex==='M'?FM:FF)).toUpperCase(),mi:'ABCDEJKLMRST'[Math.floor(rng()*12)],sex,
+    dob:o.dob?nDob(o.dob):`${pad(1+Math.floor(rng()*12))}/${pad(1+Math.floor(rng()*28))}/${1958+Math.floor(rng()*48)}`,
+    hgt:sex==='M'?`5${pad(7+Math.floor(rng()*6))}`.replace(/^5(1[0-2])/,'6$1').replace(/^61[0-2]/,m=>'60'+(+m.slice(1)-10)):`5${pad(1+Math.floor(rng()*8))}`,
+    wgt:(sex==='M'?160:120)+Math.floor(rng()*80),eye:pk(['BRO','BLU','GRN','HAZ']),hai:pk(['BRO','BLK','BLN','GRY','RED']),
+    oln:'ABCDEFGHJKLMNPRSTUWY'[Math.floor(rng()*20)]+'ABCDEFGHJKLMNPRSTUWY'[Math.floor(rng()*20)]+pad(Math.floor(rng()*1e6),6),
+    addr:`${100+Math.floor(rng()*900)} ${pk(STREETS)}`,town:pk(TOWNS)};
+  const r=rng();P.lic=r<(o.badChance?.25:.12)?'SUSPENDED':r<(o.badChance?.32:.17)?'EXPIRED':'VALID';
+  if(P.lic==='SUSPENDED')P.susp=pk(['FRA SUSPENSION — NO INSURANCE','NON-PAYMENT OF FINES','OVI ADMINISTRATIVE LICENSE SUSPENSION','CHILD SUPPORT SUSPENSION']);
+  P.warr=rng()<(o.warrChance??.08)?[Object.assign({},pk(WARR),{num:'W'+(10000+Math.floor(rng()*89999)),date:`${pad(1+Math.floor(rng()*12))}/${pad(1+Math.floor(rng()*28))}/${2023+Math.floor(rng()*3)}`})]:[];
+  P.chl=rng()<.09;
+  P.hist=rng()<(P.warr.length?.9:.3)?Array.from({length:1+Math.floor(rng()*3)},()=>{const h=pk(HIST);return{ors:h[0],ch:h[1],yr:2008+Math.floor(rng()*17),disp:pk(['CONVICTED','CONVICTED','DISMISSED','NO DISPOSITION REPORTED'])}}).sort((a,b)=>a.yr-b.yr):[];
+  return P;
+}
+function storePerson(P){S.db.per[perKey(P.last,P.first,P.dob)]=P;return P}
+function findPerson(l,f,d){
+  const k=perKey(l,f,d);if(k in S.db.per)return S.db.per[k];
+  const rng=srng(k);if(rng()<.3){S.db.per[k]=null;return null}
+  return storePerson(mkPerson(rng,{last:l,first:f,dob:d}));
+}
+function mkVehicle(p,st,rng,o={}){
+  const pk=a=>a[Math.floor(rng()*a.length)];const v=pk(VEHS),c=pk(VCO);
+  const own=storePerson(o.owner||mkPerson(rng,{warrChance:o.warrChance}));
+  const vin=Array.from({length:17},()=>'ABCDEFGHJKLMNPRSTUVWXYZ0123456789'[Math.floor(rng()*33)]).join('');
+  // Ohio passenger registrations for individuals expire on the owner's birthday
+  const [mm,dd]=own.dob.split('/');const yr=2025+Math.floor(rng()*2.6);
+  const V={plate:String(p).replace(/\s/g,'').toUpperCase(),st:st||'OH',yr:2008+Math.floor(rng()*17),vma:v[0],vmo:v[1],vst:v[2],vco:c[0],color:c[1],vin,owner:perKey(own.last,own.first,own.dob),exp:`${mm}/${dd}/${yr}`,stolen:rng()<(o.stolenChance??.03)};
+  const now=new Date();V.expired=new Date(yr,+mm-1,+dd)<now;
+  if(V.stolen)V.nic='V'+(100000000+Math.floor(rng()*899999999));
+  S.db.veh[vKey(V.plate,V.st)]=V;S.db.vin[V.vin]=V;return V;
+}
+function findVehicle(p,st){const k=vKey(p,st);if(S.db.veh[k])return S.db.veh[k];return mkVehicle(p,st,srng(k))}
+// Officer-generated subjects (more likely to have problems than the general public)
+function fieldVehicle(){const p=plate();return mkVehicle(p,'OH',srng(p+Math.random()),{stolenChance:.07,warrChance:.18})}
+function fieldPerson(){return storePerson(mkPerson(srng(Math.random()),{warrChance:.22,badChance:1}))}
+
+/* ---- terminal output ---- */
+function lOut(head,body,hits){S.leads.unshift({id:'L'+(S.lseq++),t:S.t,head,body,hits:hits||[]});if(S.leads.length>40)S.leads.pop();renderLeadsOut()}
+function vehText(V){
+  const O=S.db.per[V.owner];
+  return `*** OH BMV REGISTRATION RESPONSE ***\nLIC/${V.plate} LIS/${V.st} LIY/${V.exp.slice(-4)} LIT/PC\nVYR/${V.yr} VMA/${V.vma} VMO/${V.vmo} VST/${V.vst} VCO/${V.vco}\nVIN/${V.vin}\nREG OWNER: ${O.last}, ${O.first} ${O.mi}   DOB/${O.dob}\n           ${O.addr}, ${O.town[0]} OH ${O.town[1]}\nEXP/${V.exp}  STATUS/${V.expired?'EXPIRED':'VALID'}\n\n*** NCIC/LEADS QV RESPONSE ***\n`+
+   (V.stolen?`!!! HIT !!!  MKE/STOLEN VEHICLE\nORI/KY0100000 BOYD CO SO KY   NIC/${V.nic}\nLIC/${V.plate} LIS/${V.st} VIN/${V.vin}\nDOT/${pad(ri(1,12))}/${pad(ri(1,28))}/2026  OCA/26-${ri(1000,9999)}\nWARNING: CONFIRM HIT WITH ORIGINATING AGENCY BEFORE TAKING ACTION`:`NO NCIC WANT LIC/${V.plate} LIS/${V.st}`);
+}
+function perText(P,q){
+  if(!P)return `*** OH BMV DRIVER RESPONSE ***\nNO RECORD FOUND — NAM/${q.l.toUpperCase()}, ${q.f.toUpperCase()} DOB/${nDob(q.d)}\n\n*** NCIC/LEADS QW RESPONSE ***\nNO NCIC WANT NAM/${q.l.toUpperCase()}, ${q.f.toUpperCase()} DOB/${nDob(q.d)}`;
+  let s=`*** OH BMV DRIVER RESPONSE ***\nNAM/${P.last}, ${P.first} ${P.mi}  DOB/${P.dob}  SEX/${P.sex}\nHGT/${P.hgt} WGT/${P.wgt} EYE/${P.eye} HAI/${P.hai}\nOLN/${P.oln} OLS/OH  CLASS/D\nADDR/${P.addr}, ${P.town[0]} OH ${P.town[1]}\nLICENSE STATUS/${P.lic}${P.susp?' — '+P.susp:''}\n`;
+  if(P.chl)s+=`*** CONCEALED HANDGUN LICENSE HOLDER (BSSA Code 40P) ***\n`;
+  s+=`\n*** NCIC/LEADS QW RESPONSE ***\n`;
+  s+=P.warr.length?P.warr.map(w=>`!!! HIT !!!  MKE/WANTED PERSON\nORI/${w.ori} ${w.c}\nWNO/${w.num}  DOW/${w.date}  ${w.t==='15F'?'FELONY':'MISDEMEANOR'}\nOFF/${w.d}\nEXTRADITION/${w.ext}\nWARNING: CONFIRM HIT WITH ORIGINATING AGENCY BEFORE TAKING ACTION`).join('\n'):`NO NCIC WANT NAM/${P.last}, ${P.first} DOB/${P.dob}`;
+  return s;
+}
+function histText(P,q){
+  if(!P)return `*** III/OHLEG QR RESPONSE ***\nNO CRIMINAL HISTORY RECORD — NAM/${q.l.toUpperCase()}, ${q.f.toUpperCase()} DOB/${nDob(q.d)}`;
+  return `*** III/OHLEG QR RESPONSE ***  PUR/C\nNAM/${P.last}, ${P.first} ${P.mi}  DOB/${P.dob}  SEX/${P.sex}\n`+(P.hist.length?P.hist.map((h,i)=>`${i+1}. ${h.yr}  ARR  ORC ${h.ors} ${h.ch}\n   DISP/${h.disp}`).join('\n'):'NO CRIMINAL HISTORY RECORD');
+}
+
+/* ---- transmit ---- */
+function leadsTx(){
+  const ty=$('#lType').value,g=id=>($(id).value||'').trim();
+  S.st.lq=(S.st.lq||0)+1;
+  if(ty==='veh'){
+    const p=g('#lPlate').toUpperCase().replace(/\s/g,''),st=g('#lState');if(!p)return lErr('MISSING FIELD LIC/');
+    const V=findVehicle(p,st);
+    lOut(`RQ/QV LIC/${p} LIS/${st}`,vehText(V),V.stolen?[{kind:'veh',key:vKey(p,st)}]:[]);
+    linkQuery('veh',vKey(p,st));
+  }else if(ty==='vin'){
+    const vin=g('#lVin').toUpperCase();if(vin.length!==17)return lErr('REJECT — VIN/ MUST BE 17 CHARACTERS');
+    const V=S.db.vin[vin];
+    if(!V)lOut(`QV VIN/${vin}`,`*** NCIC/LEADS QV RESPONSE ***\nNO NCIC WANT VIN/${vin}\nNO OH BMV RECORD FOR VIN`);
+    else{lOut(`QV VIN/${vin}`,vehText(V),V.stolen?[{kind:'veh',key:vKey(V.plate,V.st)}]:[]);linkQuery('veh',vKey(V.plate,V.st))}
+  }else if(ty==='per'||ty==='qr'){
+    const q={l:g('#lLast'),f:g('#lFirst'),d:g('#lDob')};
+    if(!q.l||!q.f||nDob(q.d).length!==10)return lErr('REJECT — NAM/ AND DOB/ (MMDDYYYY) REQUIRED');
+    const P=findPerson(q.l,q.f,q.d),key=perKey(q.l,q.f,q.d);
+    if(ty==='per'){lOut(`DQ/QW NAM/${q.l.toUpperCase()},${q.f.toUpperCase()} DOB/${nDob(q.d)}`,perText(P,q),P&&P.warr.length?[{kind:'per',key}]:[]);linkQuery('per',key)}
+    else{
+      const pur=g('#lPur');if(!pur){pts(-2,'QR sent without a purpose code');return lErr('REJECT — PUR/ PURPOSE CODE REQUIRED FOR III/QR')}
+      if(pur!=='C'){pts(-4,'Wrong QR purpose code for an officer request');return lOut(`QR NAM/${q.l.toUpperCase()} PUR/${pur}`,`*** III/OHLEG QR RESPONSE ***\nREJECT — PURPOSE CODE ${pur} NOT AUTHORIZED FOR THIS TERMINAL/REQUEST\nPURPOSE CODE C (CRIMINAL JUSTICE) REQUIRED FOR LAW ENFORCEMENT INQUIRIES`)}
+      lOut(`QR NAM/${q.l.toUpperCase()},${q.f.toUpperCase()} DOB/${nDob(q.d)} PUR/C`,histText(P,q));linkQuery('qr',key);
+    }
+  }else if(ty==='ol'){
+    const o=g('#lOl').toUpperCase().replace(/\s/g,'');const P=Object.values(S.db.per).find(x=>x&&x.oln===o);
+    if(!P)lOut(`DQ OLN/${o}`,`*** OH BMV DRIVER RESPONSE ***\nNO RECORD FOUND — OLN/${o} OLS/OH`);
+    else{lOut(`DQ/QW OLN/${o}`,perText(P),P.warr.length?[{kind:'per',key:perKey(P.last,P.first,P.dob)}]:[]);linkQuery('per',perKey(P.last,P.first,P.dob))}
+  }
+}
+function lErr(t){lOut('ERROR',t)}
+function hitConfirm(eid,hi){
+  const e=S.leads.find(x=>x.id===eid);if(!e)return;const h=e.hits[hi];if(!h||h.sent)return;h.sent=true;
+  const rec=h.kind==='veh'?S.db.veh[h.key]:S.db.per[h.key];const ori=h.kind==='veh'?'KY0100000':rec.warr[0].ori;
+  lOut(`YQ ORI/${ori}`,`HIT CONFIRMATION REQUEST SENT — PRIORITY/URGENT (10 MIN)\n${h.kind==='veh'?'LIC/'+rec.plate:'NAM/'+rec.last+', '+rec.first+' DOB/'+rec.dob}\nAWAITING YR FROM ${ori}...`);
+  pts(6,'Hit confirmation (YQ) requested');rec.conf='pending';
+  setTimeout(()=>{if(!S.running)return;
+    const ok=chance(.88);rec.conf=ok?'confirmed':'cleared';
+    lOut(`YR FROM ${ori}`,ok?`HIT CONFIRMATION RESPONSE\n${h.kind==='veh'?'VEHICLE CONFIRMED STOLEN — RECOVER AND HOLD':'WARRANT CONFIRMED ACTIVE — '+(rec.warr[0].ext==='FULL'?'WILL EXTRADITE':'OHIO ONLY, WILL PICK UP')}\nCONF BY/${['SGT','DEP','DISP'][ri(0,2)]} ${pick(LN)}`:
+      `HIT CONFIRMATION RESPONSE\nNEGATIVE — ${h.kind==='veh'?'VEHICLE PREVIOUSLY RECOVERED, ENTRY PENDING CLEAR':'WARRANT SERVED/RECALLED, ENTRY PENDING CLEAR'}\nDO NOT TAKE ACTION ON THIS ENTRY`);
+    S.radio.forEach(m=>{if(m.lq&&m.lq.key===h.key&&m.relayed&&!m.confRelayed&&!m.actions.some(a=>a.k==='relayc')){
+      m.actions.push({k:'relayc',l:'Relay hit confirmation',fn:(u,mm)=>{mm.confRelayed=true;const conf=rec.conf==='confirmed';
+        radioOut(u.tg,`${u.id}, 904. ${conf?(h.kind==='veh'?'Boyd County confirms the '+bw('56')+', recover and hold.':tc(rec.warr[0].c)+' confirms the '+bw(rec.warr[0].t)+', '+(rec.warr[0].ext==='FULL'?'will extradite':'they will pick up')+'.'):'Negative on that hit, it is pending clear. Do not act on it.'}`);
+        pts(5,'Relayed hit confirmation');
+        if(conf&&h.kind==='per')setTimeout(()=>{if(S.running)radioIn(u,`Copy, one in custody, en route to the Lawrence County Jail.`)},4000)}});
+      m.need=true;}});
+    render();
+  },ri(12000,22000));
+  renderLeadsOut();
+}
+// When a query matches an officer's pending request, offer the relay
+function linkQuery(kind,key){
+  S.radio.forEach(m=>{
+    if(!m.lq||m.relayed||m.lq.key!==key)return;
+    if(kind==='qr'){m.lq.qr=true}else if(kind===m.lq.kind){m.lq.ran=true}else return;
+    if(!m.lq.ran||(m.lq.need11&&!m.lq.qr))return;
+    if(m.actions.some(a=>a.k==='relay'))return;
+    m.actions=m.actions.filter(a=>a.k!=='open');
+    m.actions.push({k:'relay',l:'Relay LEADS return',fn:(u,mm)=>relay(u,mm)});m.need=true;
+    pts(3,'LEADS query run for officer');
+  });
+  render();
+}
+function relay(u,m){
+  m.relayed=true;const q=m.lq;let txt;
+  if(q.kind==='veh'){const V=S.db.veh[q.key],O=S.db.per[V.owner];
+    txt=`${u.id}, 904. Ohio ${V.plate.slice(0,3)} ${V.plate.slice(3)} returns to a ${V.yr} ${V.color} ${MAKE[V.vma]||V.vma} ${V.vmo[0]+V.vmo.slice(1).toLowerCase()}, ${O.first[0]+O.first.slice(1).toLowerCase()} ${O.last[0]+O.last.slice(1).toLowerCase()} out of ${tc(O.town[0])}. ${V.expired?'Registration expired '+V.exp+'.':'Valid through '+V.exp+'.'} ${V.stolen?(V.conf==='confirmed'?bw('56')+' — confirmed stolen out of Boyd County. Use caution.':bw('56')+' — possible stolen hit out of Boyd County, confirming. Use caution.'):'No wants.'}`;
+    if(V.stolen){pts(4,'Officer safety: stolen hit relayed');m.awaitConf=S.t;
+      setTimeout(()=>{if(S.running&&u.st==='OS')radioIn(u,"Copy. Code 10, start me another unit, I'll hold the occupant.",{due:S.t+15,actions:[{k:'bu',l:'Send nearest LE',fn:(uu)=>sendBackup(uu,S.incidents.find(i=>i.id===uu.inc),1)}]})},3500)}
+    else if(chance(.5))setTimeout(()=>{if(S.running&&u.st==='OS')driverReq(u,chance(.6)?O:null)},ri(6000,11000));
+  }else{const P=S.db.per[q.key];
+    if(!P)txt=`${u.id}, 904. No record on file for ${q.l}, ${q.f}, ${q.d}. No Signal 15s.`;
+    else{const w=P.warr[0];
+      txt=`${u.id}, 904. ${P.first[0]+P.first.slice(1).toLowerCase()} ${P.last[0]+P.last.slice(1).toLowerCase()}, ${P.dob}, Ohio license ${P.lic.toLowerCase()}${P.susp?', '+P.susp.toLowerCase():''}. `+
+        (w?`${bw(w.t)}, ${P.conf==='confirmed'?'confirmed':'possible hit'} out of ${tc(w.c)}, ${w.d.toLowerCase()}${P.conf==='confirmed'?'.':', confirming.'} `:'No Signal 15s. ')+
+        (P.chl?'Subject is a Code 40P. ':'')+(q.need11?(P.hist.length?`Signal 11 shows ${P.hist.length} prior${P.hist.length>1?'s':''}, most recent ${P.hist[P.hist.length-1].ch.toLowerCase()} ${P.hist[P.hist.length-1].yr}.`:'Signal 11 is clear.'):'');
+      if(w){pts(4,'Officer safety: warrant hit relayed');m.awaitConf=S.t}
+      if(P.chl)pts(3,'Officer safety: Code 40P relayed');}
+  }
+  radioOut(u.tg,txt);pts(4,'Relayed LEADS return');
+}
+function plateReq(u,V){
+  V=V||fieldVehicle();const key=vKey(V.plate,V.st);
+  radioIn(u,`Signal 7, Ohio ${V.plate.slice(0,3)} ${V.plate.slice(3)}.`,{lq:{kind:'veh',key},actions:[{k:'open',l:'Open in LEADS',fn:()=>openLeads('veh',{plate:V.plate,state:V.st})}]});
+}
+function driverReq(u,P){
+  P=P||fieldPerson();const key=perKey(P.last,P.first,P.dob);const need11=chance(.35);
+  const nm=`${P.last[0]+P.last.slice(1).toLowerCase()}, ${P.first[0]+P.first.slice(1).toLowerCase()}, date of birth ${P.dob}`;
+  radioIn(u,`${need11?'Signal 11 and a Signal 15':'Signal 15 check'} on the driver: ${nm}.`,{lq:{kind:'per',key,l:P.last,f:P.first,d:P.dob,need11},
+    actions:[{k:'open',l:'Open in LEADS',fn:()=>openLeads('per',{l:P.last,f:P.first,d:P.dob})}]});
+}
+function openLeads(ty,v){
+  if(S&&S.curSender&&S.curSender!=='local'){post({type:'lp',to:S.curSender,ty,v});return}
+  setCadView('leads');lPrefill(ty,v);
+}
+function lPrefill(ty,v){
+  if(window.innerWidth<=980&&!document.body.classList.contains('solo'))showTab('pCad');
+  $('#lType').value=ty;lFields();
+  if(ty==='veh'){$('#lPlate').value=v.plate;$('#lState').value=v.state||'OH'}
+  if(ty==='per'||ty==='qr'){$('#lLast').value=v.l;$('#lFirst').value=v.f;$('#lDob').value=v.d.replace(/\D/g,'')}
+}
+function lFields(){const t=$('#lType').value;document.querySelectorAll('#leads [data-f]').forEach(e=>e.classList.toggle('hidden',!e.dataset.f.split(' ').includes(t)))}
+function renderLeadsOut(){
+  const el=$('#lOut');if(!el||!S)return;
+  setHTML(el,S.leads.map(e=>`<div class="lent"><div class="lh">${fmt(e.t)}  ${esc(e.head)}</div><pre class="${/HIT/.test(e.body)?'hit':''}">${esc(e.body)}</pre>${e.hits.map((h,i)=>`<button class="warn" ${h.sent?'disabled':''} onclick="hitConfirm('${e.id}',${i})">${h.sent?'YQ sent':'Send YQ — request hit confirmation'}</button>`).join('')}</div>`).join('')||'<div class="dim">LEADS terminal ready. Pick a message key and transmit.</div>');
+}
+
+/* =================== FLEX-STYLE CAD COMMAND LINE =================== */
+// Command words are this simulator's own approximations, not Motorola Flex syntax.
+const CMDS=[
+ ['NEW','NEW — create incident from the active call'],
+ ['D','D <unit> [unit…] [inc#] — dispatch unit(s); inc defaults to newest open'],
+ ['REC','REC [inc#] — CAD unit recommendation'],
+ ['CL','CL <inc#> — close incident'],
+ ['NOTE','NOTE <inc#> <text> — add to narrative'],
+ ['ST','ST <unit> — unit status'],
+ ['RQ','RQ <plate> [state] — LEADS vehicle query'],
+ ['QW','QW <LAST,FIRST,MMDDYYYY> — LEADS person/warrant query'],
+ ['QR','QR <LAST,FIRST,MMDDYYYY> C — criminal history (purpose code)'],
+ ['L','L — switch to LEADS · I — switch to incidents'],
+ ['HELP','HELP — list commands']];
+function cmdHint(){const v=$('#cmd').value.trim().toUpperCase();const w=v.split(/\s+/)[0];
+  const m=CMDS.filter(c=>!w||c[0].startsWith(w)||w.startsWith(c[0]));
+  $('#cmdHint').textContent=v?(m.length?m.slice(0,3).map(c=>c[1]).join('   ·   '):'Unknown command — type HELP'):'Type a command (HELP). e.g. D 803 Medic 2 · RQ HFY5034 · QW ADKINS,LINDA,03141988';}
+function runCmd(){
+  const raw=$('#cmd').value.trim();if(!raw)return;$('#cmd').value='';cmdHint();
+  S.cmdLog=(S.cmdLog||[]);S.cmdLog.unshift('> '+raw);
+  const up=raw.toUpperCase(),parts=up.split(/\s+/),c=parts[0],args=parts.slice(1);
+  const unitIds=S.units.map(u=>u.id.toUpperCase());
+  const findInc=n=>S.incidents.find(i=>String(i.id)===n||String(i.id).endsWith(n));
+  const newest=()=>S.incidents.find(i=>i.status!=='closed');
+  const say2=t=>{S.cmdLog.unshift('  '+t);renderCmdLog()};
+  if(c==='HELP'||c==='?'){CMDS.forEach(x=>S.cmdLog.unshift('  '+x[1]));return renderCmdLog()}
+  if(c==='L'){setCadView('leads');return say2('LEADS')}
+  if(c==='I'){setCadView('inc');return say2('INCIDENTS')}
+  if(c==='NEW'){if(!S.active)return say2('NO ACTIVE CALL');openNewInc(S.active);return say2('NEW INCIDENT FORM')}
+  if(c==='D'){
+    // join "MEDIC 2", "E 1400" style tokens
+    const toks=raw.split(/\s+/).slice(1);const ids=[];let inc=null;
+    for(let i=0;i<toks.length;i++){const t=toks[i].toUpperCase(),two=(t+' '+(toks[i+1]||'')).toUpperCase();
+      if(unitIds.includes(two)){ids.push(S.units[unitIds.indexOf(two)].id);i++;continue}
+      if(unitIds.includes(t)){ids.push(S.units[unitIds.indexOf(t)].id);continue}
+      const ii=findInc(t);if(ii&&t.length>=3){inc=ii;continue}
+      return say2('UNKNOWN UNIT/INC: '+t)}
+    inc=inc||newest();if(!inc)return say2('NO OPEN INCIDENT');if(!ids.length)return say2('NO UNITS');
+    const bad=ids.filter(id=>S.units.find(u=>u.id===id).st!=='AV');if(bad.length)return say2('NOT AVAILABLE: '+bad.join(', '));
+    dispatchUnits(inc,ids);return say2(`DISPATCHED ${ids.join(', ')} TO #${inc.id}`);
+  }
+  if(c==='REC'){const inc=args[0]?findInc(args[0]):newest();if(!inc)return say2('NO INCIDENT');openAssign(inc.id);return say2('REC #'+inc.id+': '+(recommend(inc).join(', ')||'NONE'))}
+  if(c==='CL'){const inc=findInc(args[0]||'');if(!inc)return say2('NO INCIDENT');closeInc(inc.id);return say2('CLOSE #'+inc.id)}
+  if(c==='NOTE'){const inc=findInc(args[0]||'');if(!inc)return say2('NO INCIDENT');inc.notes+=`\n[${fmt(S.t)}] `+raw.split(/\s+/).slice(2).join(' ');return say2('NOTE ADDED #'+inc.id)}
+  if(c==='ST'){const t=raw.split(/\s+/).slice(1).join(' ').toUpperCase();const u=S.units.find(x=>x.id.toUpperCase()===t);if(!u)return say2('UNKNOWN UNIT');return say2(`${u.id} ${u.st} ${u.inc?'#'+u.inc:''} ${u.ag}`)}
+  if(c==='RQ'){if(!args[0])return say2('RQ <PLATE>');setCadView('leads');$('#lType').value='veh';lFields();$('#lPlate').value=args[0];$('#lState').value=['OH','KY','WV'].includes(args[1])?args[1]:'OH';leadsTx();return say2('RQ/QV SENT')}
+  if(c==='QW'||c==='QR'){const f=raw.slice(c.length).trim().split(/[,\s]+/);if(f.length<3)return say2(c+' LAST,FIRST,MMDDYYYY');
+    setCadView('leads');$('#lType').value=c==='QW'?'per':'qr';lFields();$('#lLast').value=f[0];$('#lFirst').value=f[1];$('#lDob').value=f[2];if(c==='QR')$('#lPur').value=(f[3]||'').toUpperCase();leadsTx();return say2(c+' SENT')}
+  say2('UNKNOWN COMMAND — HELP');
+}
+function renderCmdLog(){const el=$('#cmdLog');if(el)el.textContent=(S.cmdLog||[]).slice(0,6).join('\n')}
+let CADV='inc';
+function setCadView(v){CADV=v;if(S)S.cadView=v;$('#cadInc').classList.toggle('hidden',v!=='inc');$('#leads').classList.toggle('hidden',v!=='leads');$('#cadMap').classList.toggle('hidden',v!=='map');
+  $('#cad').classList.toggle('mapmode',v==='map');
+  $('#vInc').classList.toggle('on',v==='inc');$('#vLeads').classList.toggle('on',v==='leads');$('#vMap').classList.toggle('on',v==='map');if(v==='map')setTimeout(drawMaps,20)}
+
+/* =================== GAME LOOP =================== */
+let last=0;
+function tick(){
+  if(!S||!S.running)return;
+  const now=performance.now();const dt=Math.min(1,(now-last)/1000);last=now;
+  if(S.paused)return;
+  S.t+=dt;
+  // spawn calls
+  if(S.t>=S.nextCall&&S.t<S.len-20){if(spawnCall())S.nextCall=S.t+rnd(S.rate*.5,S.rate*1.4);else S.nextCall=S.t+5}
+  // duplicate callers
+  S.calls.forEach(c=>{if(c.dupSched&&S.t>=c.dupSched){c.dupSched=null;spawnCall({sc:c.sc,dupOf:{zk:c.zk,addrLoose:c.addrLoose,nat:c.sc.nat,incId:c.incId}})}});
+  // abandon ringing
+  S.lines.forEach((c,i)=>{if(c&&c.state==='ring'&&S.t-c.ringAt>40){c.state='abandoned';c.abandonedFrom=true;S.st.abandoned++;pts(-10,`Line ${i+1} abandoned — call back!`)}});
+  // dropped/abandoned never called back
+  S.lines.forEach((c,i)=>{if(c&&(c.state==='abandoned'||c.state==='dropped')&&!c.cbDone&&!c.warned&&S.t-(c.ans||c.ringAt)>90){c.warned=true;pts(-6,`No callback on line ${i+1} after 90s`)}});
+  // calls released without CAD entry
+  S.calls.forEach(c=>{if(c.state==='ended'&&!c.incId&&!c.cadChecked&&!c.xferred&&!c.dupOf&&!c.sc.noDispatch&&!c.sc.xfer&&S.t-c.released>45){c.cadChecked=true;pts(-15,`Call #${c.id} (${Z[c.zk].n}) was never entered in CAD`)}});
+  // phone ring sound
+  if(S.lines.some(c=>c&&c.state==='ring')&&Math.floor(S.t/2.5)!==Math.floor((S.t-dt)/2.5))sfx.ring();
+  // units
+  S.units.forEach(u=>{unitTick(u);if(u.mv){const f=Math.min(1,(S.t-u.mv.t0)/Math.max(1,u.mv.t1-u.mv.t0));u.pos=lerp(u.mv.a,u.mv.b,f);if(f>=1&&u.st!=='ER')delete u.mv}});
+  if(Math.floor(S.t*2)!==Math.floor((S.t-dt)*2)){drawMaps();snap()}
+  if(S.t>=S.nextDuty){dutyChange();S.nextDuty=S.t+rnd(150,260)}
+  // radio ack timers
+  S.radio.forEach(m=>{if(m.need&&!m.acked&&m.dir==='in'&&S.t>m.due){
+    m.due=S.t+15;S.st.missedAcks++;pts(m.emerg?-15:-3,`${m.from} unanswered on ${m.tg}`);
+    const u=S.units.find(x=>x.id===m.from);if(u){sfx.chirp();say(`${u.agency==='OSHP'?'Lawrence County':DCS[u.type]}, ${u.id}... ${u.agency==='OSHP'?'Lawrence County':DCS[u.type]}, ${u.id}.`,'radio')}
+  }});
+  S.radio.forEach(m=>{if(m.lq&&!m.relayed&&!m.lqPen&&S.t-m.t>90){m.lqPen=true;pts(-5,`${m.from} still waiting on a LEADS return`)}
+    if(m.awaitConf&&!m.confRelayed&&!m.confPen&&S.t-m.awaitConf>150){m.confPen=true;pts(-6,'Hit never confirmed/relayed to the officer')}});
+  // self-initiated
+  if(S.t>=S.nextSelf){selfInit();S.nextSelf=S.t+rnd(90,170)*(S.diff==='hard'?.7:1)}
+  if(!S.emergDone&&S.t>=S.nextEmerg){if(!emergencyAlert())S.nextEmerg=S.t+30}
+  if(S.t>=S.len){endShift();return}
+  renderLite();
+}
+function unitTick(u){
+  if(!['DP','ER','OS','TR','AH'].includes(u.st)||S.t<u.next)return;
+  const inc=S.incidents.find(i=>i.id===u.inc);const z=inc?Z[inc.zk]:Z[u.home];
+  if(u.st==='DP'){
+    if(u.noResp){u.noResp=false;u.next=S.t+9999;u.st='DP';
+      radioIn(null,`No response from Station ${u.fd} (${FDN[u.fd]}) after page. No crew has marked en route.`,{from:'CAD',tg:'FD44DISP',due:S.t+25,
+        actions:[{k:'retone',l:`Re-tone Station ${u.fd}`,group:'nr',fn:()=>{sfx.pager();radioOut('FD44DISP',`Second page, Station ${u.fd}, respond ${inc?NAT[inc.nat].d:''}, ${inc?inc.loc:''}.`);pts(4,'Re-toned volunteer station');
+          if(chance(.6)){u.next=S.t+ri(25,45)}else{setTimeout(()=>{if(S.running&&u.st==='DP'){u.next=S.t;u.noResp=true;unitTick(u)}},40000)}}},
+          {k:'ma',l:'Request mutual aid',group:'nr',fn:()=>{u.st='AV';u.inc=null;if(inc){inc.units=inc.units.filter(x=>x!==u.id);const m=S.units.filter(x=>x.type==='FIRE'&&x.st==='AV').sort((a,b)=>dist(a.pos,z)-dist(b.pos,z))[0];if(m){dispatchUnits(inc,[m.id]);pts(8,`Mutual aid: ${m.id}`)}}}}]});
+      return;}
+    u.st='ER';u.next=S.t+eta(u,z);{const ip=inc?incPos(inc):z;u.mv={a:{lat:u.pos.lat,lon:u.pos.lon},b:{lat:ip.lat+rnd(-.0025,.0025),lon:ip.lon+rnd(-.0025,.0025)},t0:S.t,t1:u.next}}radioIn(u,u.type==='FIRE'&&u.vol?`${u.id} en route with ${ri(2,5)}.`:`${u.id} en route.`,{silent:false});
+  }else if(u.st==='ER'){
+    u.st='OS';u.osAt=S.t;u.pos=u.mv?u.mv.b:{lat:z.lat+rnd(-.004,.004),lon:z.lon+rnd(-.004,.004)};delete u.mv;
+    u.next=S.t+(u.type==='EMS'?ri(45,90):u.type==='FIRE'?ri(70,150):ri(60,140));
+    const size=inc&&inc.nat==='SF'?' Two-story residential, heavy smoke showing from the rear. Establishing command.':inc&&inc.nat==='MVAI'?' Two vehicles, one with entrapment.':'';
+    radioIn(u,`${u.id} on scene.${u.type==='FIRE'?size:''}`);
+    if(u.type==='LE'&&chance(.55))u.reqAt=S.t+ri(12,35);
+  }else if(u.st==='OS'){
+    if(u.reqAt&&S.t>=u.reqAt){u.reqAt=null;unitReq(u);u.next=S.t+ri(30,70);return}
+    if(u.type==='EMS'&&inc&&chance(.75)){
+      u.st='TR';u.dest=pick(u.home==='PROC'||u.home==='CHES'||u.home==='WIND'?HOSP.slice(1,3):u.home==='DEC'?[HOSP[3]]:HOSP.slice(0,3));
+      u.next=S.t+ri(40,80);{const hi=HOSP.indexOf(u.dest);const hp=HOSPS[hi]||{lat:38.74,lon:-82.83};u.hp=hp;u.mv={a:{...u.pos},b:{lat:hp.lat,lon:hp.lon},t0:S.t,t1:u.next}}radioIn(u,`${u.id} transporting one to ${u.dest}, priority ${ri(2,3)}.`);
+    }else{u.st='AV';u.inc=null;goHome(u);radioIn(u,u.type==='EMS'?`${u.id}, patient refusal. Back in service.`:u.type==='FIRE'?`${u.id}, all clear, returning to quarters.`:`${u.id}, Signal 33.`);maybeClose(inc)}
+  }else if(u.st==='TR'){u.st='AH';if(u.hp)u.pos={lat:u.hp.lat,lon:u.hp.lon};delete u.mv;u.next=S.t+ri(30,60);radioIn(u,`${u.id} at destination.`)}
+  else if(u.st==='AH'){u.st='AV';u.inc=null;goHome(u);radioIn(u,`${u.id} back in service.`);maybeClose(inc)}
+}
+function goHome(u){const h=Z[u.home];u.mv={a:{...u.pos},b:{lat:h.lat+rnd(-.008,.008),lon:h.lon+rnd(-.008,.008)},t0:S.t,t1:S.t+eta(u,h)*1.2}}
+function maybeClose(inc){if(!inc)return;if(inc.units.every(id=>{const u=S.units.find(x=>x.id===id);return u.inc!==inc.id})){inc.status='closed';inc.closedAt=S.t}}
+
+/* =================== RENDER =================== */
+function render(){renderPhone();renderCad();renderRadio();renderUnits();drawMaps();renderLite()}
+let lastSig='';
+function renderLite(){
+  $('#clk').textContent=fmt(S.t);$('#left').textContent=fmt(S.len-S.t);$('#score').textContent=S.score;
+  $('#act').textContent=S.incidents.filter(i=>i.status!=='closed').length;
+  const ringing=S.lines.filter(c=>c&&(c.state==='ring'||c.state==='abandoned')).length;
+  const need=S.radio.filter(m=>m.need&&!m.acked&&m.dir==='in').length;
+  const pend=S.incidents.filter(i=>i.status==='pend').length;
+  dot('#dPh',ringing);dot('#dRd',need);dot('#dCad',pend);
+  // periodic refresh of time-dependent bits
+  const sig=Math.floor(S.t)+'|'+S.lines.map(c=>c?c.state:'-').join()+'|'+S.units.map(u=>u.st).join('')+'|'+S.radio.length;
+  if(sig!==lastSig){lastSig=sig;renderPhoneLines();renderCad();renderUnits();if(S.radio.length!==renderRadio.n)renderRadio()}
+}
+function dot(sel,n){const d=$(sel);if(n){d.textContent=n;d.classList.remove('hidden')}else d.classList.add('hidden')}
+function renderPhoneLines(){
+  const el=$('#linesBox');if(!el)return renderPhone();
+  setHTML(el,linesHTML());$('#phSum').textContent=`${S.st.calls} calls`;
+}
+function linesHTML(){
+  return S.lines.map((c,i)=>{
+    if(!c)return `<div class="ln"><div class="t">911 LINE ${i+1}</div><div class="dim">idle</div></div>`;
+    const cls={ring:'ring',active:'active',hold:'hold',abandoned:'ab',dropped:'ab'}[c.state]||'';
+    const lbl={ring:`RINGING ${Math.floor(S.t-c.ringAt)}s`,active:'CONNECTED',hold:'ON HOLD',abandoned:'ABANDONED',dropped:'DISCONNECTED'}[c.state];
+    const btn=c.state==='ring'||c.state==='hold'?`<button class="go" onclick="answer(S.lines[${i}])">${c.state==='ring'?'Answer':'Pick up'}</button>`:
+      (c.state==='abandoned'||c.state==='dropped')&&!c.cbDone?`<button class="warn" onclick="callBack(S.lines[${i}])">Call back</button>`:
+      c!==S.active?`<button onclick="S.active=S.lines[${i}];render()">View</button>`:'';
+    return `<div class="ln ${cls}"><div class="t">911 LINE ${i+1} · ${c.wireless?'WIRELESS':'LANDLINE'}</div><b>${lbl}</b><div class="mono dim" style="font-size:11px">${c.a.cb}</div>${btn}</div>`;
+  }).join('');
+}
+function renderPhone(){
+  const c=S.active;
+  let h=`<div class="lines" id="linesBox">${linesHTML()}</div>`;
+  if(c){
+    const live=c.state==='active';
+    h+=`<div class="ali">${esc(c.ali)}</div>
+    <div class="tx" id="txBox">${c.tx.map(x=>`<div class="${x.who}">${x.who==='you'?'<b>You:</b> ':x.who==='caller'?'<b>Caller:</b> ':''}${esc(x.text)}</div>`).join('')}</div>`;
+    if(live){
+      h+=`<div class="qs">${Q.map(([k,q])=>`<button class="${c.asked.has(k)?'asked':''}" onclick="ask(S.active,'${k}')">${q}</button>`).join('')}
+      ${(c.dupOf?[]:(c.sc.special||[])).map((sp,ix)=>`<button class="special ${c.special.has(sp.k)?'asked':''}" onclick="special(S.active,S.active.sc.special[${ix}])">★ ${sp.l}</button>`).join('')}</div>`;
+    }
+    if(c.notes.length)h+=`<div class="notes">${esc(c.notes.join('\n'))}</div>`;
+    h+=`<div class="acts">
+      ${c.incId?`<button disabled>In CAD #${c.incId}</button>`:`<button class="pri" onclick="openNewInc(S.active)">Create incident</button>`}
+      ${live?`<button onclick="hold(S.active)">Hold</button>`:''}
+      ${live?`<select onchange="transfer(S.active,this.value)" style="flex:1.4"><option value="">Transfer…</option>${['Boyd Co. KY 911','Cabell Co. WV 911','Wayne Co. WV 911','Scioto Co. OH 911','Gallia Co. OH 911','Poison Control'].map(x=>`<option>${x}</option>`).join('')}</select>`:''}
+      ${c.state!=='ended'?`<button class="bad" onclick="release(S.active)">Release</button>`:''}
+    </div>`;
+  }else h+=`<div class="dim" style="text-align:center;padding:30px 10px">No active call.<br>Answer a ringing line.</div>`;
+  setHTML($('#phone'),h);$('#phSum').textContent=`${S.st.calls} calls`;
+  const tb=$('#txBox');if(tb)tb.scrollTop=tb.scrollHeight;
+}
+function renderCad(){
+  const rows=S.incidents.slice(0,40).map(i=>{
+    const z=Z[i.zk];
+    const us=i.units.map(id=>{const u=S.units.find(x=>x.id===id);return `<span class="ub ${u.inc===i.id?u.st:'OOS'}">${id} ${u.inc===i.id?u.st:'CLR'}</span>`}).join('');
+    return `<tr class="p${i.pri} ${i.status==='pend'?'pend':''} ${i.status==='closed'?'closed':''}">
+      <td>#${i.id}<br><span class="dim">${fmt(S.t-i.created)}</span></td><td>P${i.pri}</td><td><b>${i.nat}</b>${BSSA[i.nat]?` <span style="color:var(--cyan)">${bw(BSSA[i.nat])}</span>`:''}<br><span class="dim">${NAT[i.nat].d}</span></td>
+      <td>${esc(i.loc)}<br><span class="dim">${z.n} · FD ${z.fd}</span></td><td>${us||'<span style="color:var(--red)">PENDING</span>'}</td>
+      <td><button data-focus="${i.id}" title="Show on map">📍</button>${i.status!=='closed'?`<button class="go" onclick="openAssign(${i.id})">Assign</button><button onclick="showInc(${i.id})">Notes</button><button onclick="closeInc(${i.id})">Close</button>`:`<button onclick="showInc(${i.id})">Notes</button>`}</td></tr>`;
+  }).join('');
+  setHTML($('#cadInc'),rows?`<table><tr><th>INC</th><th>P</th><th>NATURE</th><th>LOCATION</th><th>UNITS</th><th></th></tr>${rows}</table>`:`<div class="dim" style="padding:20px;text-align:center">No incidents. Create one from an active call.</div>`);
+}
+function showInc(id){const i=S.incidents.find(x=>x.id===id);modal(`<h3>#${i.id} ${i.nat} — ${esc(i.loc)}</h3><div class="notes">${esc(i.notes||'(no narrative)')}</div><div class="dim mono" style="font-size:12px">Created ${fmt(i.created)} · First dispatch ${i.firstDisp!=null?fmt(i.firstDisp):'—'}${i.closedAt?' · Closed '+fmt(i.closedAt):''}</div><div class="acts" style="margin-top:10px"><button onclick="closeModal()">Close</button></div>`)}
+function renderRadio(){
+  const tgList=['ALL','SO44DSP','FD44DISP','IRON FIRE','EMS44DSP','XSO-44'];
+  if(!$('#tgs').children.length)$('#tgs').innerHTML=tgList.map(t=>`<button data-tgf="${t}" class="${RFILT===t?'on':''}">${t}</button>`).join('');
+  const list=S.radio.slice(0,80);
+  setHTML($('#radio'),list.map(m=>`<div data-tg="${m.tg}" class="rmsg ${m.dir==='out'?'out':''} ${m.emerg&&m.need?'emerg':m.need&&!m.acked&&m.dir==='in'?'need':''}">
+    <div class="h"><span>${fmt(m.t)}</span><span class="tg">${m.tg}</span><b style="color:var(--txt)">${m.from}</b></div>
+    <div style="white-space:pre-wrap">${esc(m.text)}</div>
+    ${m.dir==='in'&&(m.need||m.actions&&m.actions.length)?`<div class="a">${!m.acked&&!m.emerg?`<button class="go" onclick="ack('${m.id}')">Copy / Ack</button>`:''}${(m.actions||[]).map(a=>`<button class="${m.emerg?'bad':'pri'}" onclick="act('${m.id}','${a.k}')">${a.l}</button>`).join('')}</div>`:''}
+  </div>`).join('')||'<div class="dim" style="padding:20px;text-align:center">Radio quiet.</div>');
+  renderRadio.n=S.radio.length;applyRadioFilter();
+  $('#rdSum').textContent=S.radio.filter(m=>m.need&&!m.acked&&m.dir==='in').length+' waiting';
+  const sel=$('#pttUnit');const cur=sel.value;
+  sel.innerHTML=S.units.filter(u=>u.type==='LE').map(u=>`<option ${u.id===cur?'selected':''}>${u.id}</option>`).join('');
+}
+function renderUnits(){
+  const g=t=>S.units.filter(u=>u.type===t).map(u=>{const inc=u.inc?S.incidents.find(i=>i.id===u.inc):null;
+    return `<div class="ucard" title="${esc(u.ag)}"><b class="${u.st}">${u.id}</b> <span class="${u.st}">${u.st}</span><div class="ag">${esc(u.ag)}</div><div class="ag">${inc?'#'+inc.id+' '+inc.nat:Z[u.home].n}</div></div>`}).join('');
+  setHTML($('#units'),`<div class="mono" style="font-size:11px;margin-bottom:4px">${(()=>{const n=nuaList();return n.length?`<span style="color:var(--amber)">NUA (no unit available): ${n.join(', ')}</span> <span class="dim">— send deputies</span>`:'<span class="dim">All village/city PDs have a unit on</span>'})()}</div><div class="dim mono" style="font-size:10.5px">OFF off duty · AV available · DP dispatched · ER en route · OS on scene · TR transporting · AH at hospital</div><div class="ugh">Law</div><div class="ugrid">${g('LE')}</div><div class="ugh">Fire</div><div class="ugrid">${g('FIRE')}</div><div class="ugh">EMS</div><div class="ugrid">${g('EMS')}</div>`);
+}
+/* =================== CAD MAP =================== */
+// Schematic vector map (no map tiles can load here). Road and hospital positions are approximate.
+const B={n:38.80,s:38.36,w:-82.84,e:-82.18},W=900,H=600;
+const px=p=>[(p.lon-B.w)/(B.e-B.w)*W,(B.n-p.lat)/(B.n-B.s)*H];
+const RIVER=[[38.592,-82.84],[38.585,-82.80],[38.565,-82.745],[38.548,-82.700],[38.525,-82.672],[38.495,-82.655],[38.465,-82.640],[38.435,-82.618],[38.410,-82.598],[38.395,-82.560],[38.396,-82.520],[38.410,-82.480],[38.420,-82.440],[38.425,-82.400],[38.428,-82.370],[38.445,-82.340],[38.480,-82.310],[38.520,-82.290],[38.570,-82.270],[38.620,-82.250],[38.690,-82.220],[38.76,-82.19]];
+const ROADS=[
+ {n:'US-52',w:4,c:'#c2410c',p:[[38.603,-82.84],[38.588,-82.79],[38.562,-82.730],[38.546,-82.702],[38.534,-82.684],[38.506,-82.651],[38.472,-82.630],[38.442,-82.609],[38.421,-82.589],[38.409,-82.546],[38.413,-82.500],[38.426,-82.462]]},
+ {n:'SR-7',w:3,c:'#b45309',p:[[38.426,-82.462],[38.431,-82.420],[38.438,-82.378],[38.461,-82.336],[38.513,-82.303],[38.561,-82.283],[38.621,-82.263],[38.700,-82.233],[38.78,-82.205]]},
+ {n:'SR-93',w:2.4,c:'#8a8178',p:[[38.537,-82.683],[38.580,-82.668],[38.625,-82.652],[38.665,-82.646],[38.720,-82.641],[38.80,-82.636]]},
+ {n:'SR-141',w:2.4,c:'#8a8178',p:[[38.537,-82.683],[38.565,-82.641],[38.600,-82.592],[38.640,-82.541],[38.690,-82.481],[38.740,-82.421],[38.80,-82.385]]}];
+const COUNTY=[[38.592,-82.818],[38.782,-82.818],[38.790,-82.62],[38.785,-82.36],[38.730,-82.28],[38.70,-82.222]];
+const HOSPS=[{n:"King's Daughters",lat:38.474,lon:-82.662,k:0},{n:'Cabell Huntington',lat:38.412,lon:-82.428,k:1},{n:"St. Mary's",lat:38.416,lon:-82.408,k:2}];
+const MV={};let MAPSEL=null,REMOTE_MAP=null;const seenInc=new Set();
+const lerp=(a,b,f)=>({lat:a.lat+(b.lat-a.lat)*f,lon:a.lon+(b.lon-a.lon)*f});
+function incPos(i){if(!i.pos){const z=Z[i.zk];i.pos={lat:z.lat+rnd(-.006,.006),lon:z.lon+rnd(-.006,.006)}}return i.pos}
+function mapData(){
+  return{inc:S.incidents.filter(i=>i.status!=='closed').map(i=>{const p=incPos(i);return{id:i.id,nat:i.nat,pri:i.pri,lat:p.lat,lon:p.lon,loc:i.loc,pend:i.status==='pend'}}),
+    u:S.units.map(u=>({id:u.id,type:u.type,st:u.st,lat:u.pos.lat,lon:u.pos.lon,inc:u.inc}))};
+}
+function ensureMap(el){
+  if(el.querySelector('.mapwrap'))return;
+  const id=el.id;MV[id]=MV[id]||{cx:W/2,cy:H/2,z:id==='map'?1:1.15,lab:id!=='map',follow:id!=='map'};
+  el.innerHTML=`<div class="mapwrap"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet"></svg>
+   <div class="mapctl"><button data-mz="1" title="Zoom in">+</button><button data-mz="-1" title="Zoom out">−</button><button data-mz="0" title="Whole county">⌂</button>
+   <label><input type="checkbox" data-ml ${MV[id].lab?'checked':''}> Labels</label><label><input type="checkbox" data-mf ${MV[id].follow?'checked':''}> Follow new calls</label></div>
+   <div class="mapleg mono"><span style="color:#4ea8ff">● Law</span> <span style="color:#ff6b3d">■ Fire</span> <span style="color:#34d399">◆ EMS</span> <span style="color:#ff4d4f">⬤ Incident</span> · schematic, roads approximate</div></div>`;
+  const svg=el.querySelector('svg'),v=MV[id];let drag=null;
+  const k=()=>W/v.z/svg.clientWidth;
+  svg.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,cx:v.cx,cy:v.cy,moved:false};svg.setPointerCapture(e.pointerId)});
+  svg.addEventListener('pointermove',e=>{if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(Math.abs(dx)+Math.abs(dy)>3)drag.moved=true;v.cx=drag.cx-dx*k();v.cy=drag.cy-dy*k();drawMap(el)});
+  svg.addEventListener('pointerup',e=>{const d=drag;drag=null;if(d&&!d.moved){const t=e.target.closest('[data-inc]');if(t){focusInc(+t.dataset.inc,true)}}});
+  svg.addEventListener('wheel',e=>{e.preventDefault();v.z=Math.max(.8,Math.min(8,v.z*(e.deltaY<0?1.2:1/1.2)));drawMap(el)},{passive:false});
+  el.querySelectorAll('[data-mz]').forEach(b=>b.onclick=()=>{const d=+b.dataset.mz;if(!d){v.z=id==='map'?1:1.15;v.cx=W/2;v.cy=H/2}else v.z=Math.max(.8,Math.min(8,v.z*(d>0?1.4:1/1.4)));drawMap(el)});
+  el.querySelector('[data-ml]').onchange=e=>{v.lab=e.target.checked;drawMap(el)};
+  el.querySelector('[data-mf]').onchange=e=>{v.follow=e.target.checked};
+}
+function drawMap(el){
+  const D=ROLE==='remote'?REMOTE_MAP:(S?mapData():null);if(!D)return;ensureMap(el);
+  const v=MV[el.id],svg=el.querySelector('svg');const vw=W/v.z,vh=H/v.z;
+  svg.setAttribute('viewBox',`${v.cx-vw/2} ${v.cy-vh/2} ${vw} ${vh}`);
+  const s=1/Math.sqrt(v.z);const lab=v.lab||v.z>=2;
+  const line=pts=>pts.map(([la,lo])=>px({lat:la,lon:lo}).join(',')).join(' ');
+  const col={LE:'#4ea8ff',FIRE:'#ff6b3d',EMS:'#34d399'};
+  let h=`<rect x="-500" y="-500" width="${W+1000}" height="${H+1000}" fill="#0a1017"/>`;
+  h+=`<polyline points="${line(COUNTY)}" fill="none" stroke="#3b4b5e" stroke-width="${1.5*s}" stroke-dasharray="${8*s} ${6*s}"/>`;
+  h+=`<polyline points="${line(RIVER)}" fill="none" stroke="#1e4f7a" stroke-width="${14*s}" stroke-linejoin="round" stroke-linecap="round" opacity=".85"/>`;
+  h+=ROADS.map(r=>`<polyline points="${line(r.p)}" fill="none" stroke="${r.c}" stroke-width="${r.w*s}" stroke-linejoin="round" opacity=".9"/>`).join('');
+  h+=ROADS.map(r=>{const m=r.p[Math.floor(r.p.length/2)];const[x,y]=px({lat:m[0],lon:m[1]});return `<g transform="translate(${x},${y}) scale(${s})"><rect x="-22" y="-9" width="44" height="18" rx="4" fill="#1f2937" stroke="${r.c}"/><text y="4.5" text-anchor="middle" font-size="12" fill="#e5e7eb" font-weight="700">${r.n}</text></g>`}).join('');
+  h+=`<g transform="translate(${px({lat:38.46,lon:-82.75}).join(',')}) scale(${s})"><text fill="#3b4b5e" font-size="20" letter-spacing="4">KENTUCKY</text></g><g transform="translate(${px({lat:38.40,lon:-82.38}).join(',')}) scale(${s})"><text fill="#3b4b5e" font-size="20" letter-spacing="4">WEST VIRGINIA</text></g><g transform="translate(${px({lat:38.74,lon:-82.80}).join(',')}) scale(${s})"><text fill="#3b4b5e" font-size="18" letter-spacing="3">LAWRENCE CO., OHIO</text></g>`;
+  h+=ZK.map(k=>{const[x,y]=px(Z[k]);const t=Z[k].town;return `<g transform="translate(${x},${y}) scale(${s})"><circle r="${t?5:3}" fill="${t?'#64748b':'#334155'}"/><text x="8" y="-6" font-size="${t?15:12}" fill="${t?'#cbd5e1':'#64748b'}">${Z[k].n.split(' (')[0]}</text></g>`}).join('');
+  h+=HOSPS.map(o=>{const[x,y]=px(o);return `<g transform="translate(${x},${y}) scale(${s})"><rect x="-8" y="-8" width="16" height="16" rx="3" fill="#7f1d1d"/><text y="5" text-anchor="middle" font-size="13" fill="#fff" font-weight="800">H</text>${lab?`<text x="11" y="5" font-size="11" fill="#fca5a5">${o.n}</text>`:''}</g>`}).join('');
+  // lines from responding units to their incident
+  h+=D.u.filter(u=>['DP','ER'].includes(u.st)&&u.inc).map(u=>{const i=D.inc.find(x=>x.id===u.inc);if(!i)return'';const a=px(u),b=px(i);return `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${col[u.type]}" stroke-width="${1.4*s}" stroke-dasharray="${5*s} ${4*s}" opacity=".7"/>`}).join('');
+  h+=D.inc.map(i=>{const[x,y]=px(i);const sel=MAPSEL===i.id;const c=i.pri===1?'#ff4d4f':i.pri===2?'#ffb020':'#4ea8ff';
+    return `<g data-inc="${i.id}" style="cursor:pointer" transform="translate(${x},${y}) scale(${s})"><circle r="${sel?22:16}" fill="${c}" opacity="${i.pend?.35:.18}"><animate attributeName="r" values="${sel?'18;26;18':'14;20;14'}" dur="1.6s" repeatCount="indefinite"/></circle><circle r="8" fill="${c}" stroke="#fff" stroke-width="${sel?2.5:1}"/><text x="12" y="-10" font-size="13" font-weight="700" fill="#fff" paint-order="stroke" stroke="#000" stroke-width="3">#${String(i.id).slice(-3)} ${i.nat}</text></g>`}).join('');
+  h+=D.u.filter(u=>u.st!=='OFF').map(u=>{const[x,y]=px(u);const busy=u.st!=='AV';const c=col[u.type];const o=busy?1:.45;
+    const shp=u.type==='LE'?`<circle r="6" fill="${c}" opacity="${o}" stroke="#000"/>`:u.type==='FIRE'?`<rect x="-6" y="-6" width="12" height="12" fill="${c}" opacity="${o}" stroke="#000"/>`:`<rect x="-6" y="-6" width="12" height="12" transform="rotate(45)" fill="${c}" opacity="${o}" stroke="#000"/>`;
+    return `<g transform="translate(${x},${y}) scale(${s})">${shp}${(lab&&busy)||(v.z>=3)?`<text x="9" y="14" font-size="11" fill="${c}" paint-order="stroke" stroke="#000" stroke-width="3">${u.id} ${u.st}</text>`:''}</g>`}).join('');
+  svg.innerHTML=h;
+}
+function drawMaps(){
+  const D=ROLE==='remote'?REMOTE_MAP:(S?mapData():null);
+  if(D){D.inc.forEach(i=>{if(!seenInc.has(i.id)){seenInc.add(i.id);Object.keys(MV).forEach(k=>{if(MV[k].follow){const[x,y]=px(i);MV[k].cx=x;MV[k].cy=y;MV[k].z=Math.max(MV[k].z,2.2)}})}})}
+  ['map','cadMap','bigMap'].forEach(id=>{const el=$('#'+id);if(el&&el.offsetParent)drawMap(el)});
+}
+function focusInc(id,bcast){
+  MAPSEL=id;const D=ROLE==='remote'?REMOTE_MAP:(S?mapData():null);const i=D&&D.inc.find(x=>x.id===id);
+  if(i)Object.keys(MV).forEach(k=>{const[x,y]=px(i);MV[k].cx=x;MV[k].cy=y;MV[k].z=Math.max(MV[k].z,2.5)});
+  if(bcast)post({type:'focus',id});
+  const vis=['bigMap','cadMap','map'].some(m=>{const e=$('#'+m);return e&&e.offsetParent});
+  if(!vis&&$('#pCad').offsetParent)setCadView('map');
+  drawMaps();
+}
+
+/* =================== MULTI-MONITOR =================== */
+// One window runs the shift (primary). Other windows of the same page join as extra screens and
+// mirror its panels; anything clicked on them is sent back to the primary to carry out.
+const ME=Math.random().toString(36).slice(2,8);let ROLE=null,lastHB=0,PRIM=null,bc=null;
+try{bc=new BroadcastChannel('lc911sim')}catch(e){}
+function post(m){m.from=ME;try{bc&&bc.postMessage(m)}catch(e){}}
+const MIR=['phone','cadInc','lOut','radio','units','cmdLog','pttUnit','phSum','rdSum','clk','left','score','act'];
+let lastSent={};
+function snap(force){
+  if(ROLE!=='primary'||!S||!S.running)return;
+  const m={type:'snap',f:{}};
+  MIR.forEach(id=>{const el=$('#'+id);if(!el)return;const v=el.innerHTML;if(force||lastSent[id]!==v){m.f[id]=v;lastSent[id]=v}});
+  m.map=mapData();m.dots=['dPh','dRd','dCad'].map(d=>$('#'+d).classList.contains('hidden')?'':$('#'+d).textContent);
+  m.modal={to:S.modalOwner||S.modalLast,v:S.modalV,open:!!S.modalOwner&&S.modalOwner!=='local',html:S.modalOwner&&S.modalOwner!=='local'?$('#mbox').innerHTML:''};
+  post(m);
+}
+let shownModalV=-1;
+function onSnap(m){
+  if(ROLE!=='remote')return;lastHB=Date.now();$('#lostBanner').classList.add('hidden');
+  Object.entries(m.f).forEach(([id,v])=>{const el=$('#'+id);if(!el)return;
+    if(id==='pttUnit'){const cur=el.value;el.innerHTML=v;if(cur)el.value=cur;return}
+    if(['clk','left','score','act','phSum','rdSum','cmdLog'].includes(id))el.innerHTML=v;else setHTML(el,v);if(id==='phone'){const tb=$('#txBox');if(tb)tb.scrollTop=tb.scrollHeight}});
+  REMOTE_MAP=m.map;drawMaps();
+  ['dPh','dRd','dCad'].forEach((d,i)=>{const e=$('#'+d);e.textContent=m.dots[i];e.classList.toggle('hidden',!m.dots[i])});
+  const md=m.modal;
+  if(md&&md.to===ME){if(md.open&&md.v!==shownModalV){shownModalV=md.v;$('#mbox').innerHTML=md.html;$('#modal').classList.remove('hidden');bindModal()}
+    if(!md.open)$('#modal').classList.add('hidden')}
+  applyRadioFilter();
+}
+const STATIC_IN=['lType','lPlate','lState','lVin','lLast','lFirst','lDob','lOl','lPur','cmd','pttUnit'];
+function collect(){
+  return{st:STATIC_IN.map(id=>[id,$('#'+id).value]),mb:[...document.querySelectorAll('#mbox input,#mbox select,#mbox textarea')].map(x=>[x.value,x.checked])};
+}
+function fwdClick(el,type,value){
+  const box=el.closest('#phone,#cadInc,#lOut,#radio,#mbox,#units');const on=el.getAttribute('onclick')||el.getAttribute('onchange');
+  if(!box||!on)return;
+  const all=[...box.querySelectorAll('[onclick],[onchange]')].filter(x=>(x.getAttribute('onclick')||x.getAttribute('onchange'))===on);
+  post({type:'act',kind:type,box:box.id,on,nth:all.indexOf(el),value,vals:collect()});
+}
+const FWD_IDS=['lGo','cmdGo','btnNewInc','btnStatusChk','btnPause','btnEnd'];
+document.addEventListener('click',e=>{
+  if(ROLE!=='remote')return;
+  const idEl=e.target.closest(FWD_IDS.map(i=>'#'+i).join(','));
+  if(idEl){e.preventDefault();e.stopImmediatePropagation();post({type:'act',id:idEl.id,vals:collect()});
+    if(idEl.id==='cmdGo'){$('#cmd').value='';cmdHint()}if(idEl.id==='btnPause')idEl.textContent=idEl.textContent==='Pause'?'Resume':'Pause';return}
+  const el=e.target.closest('[onclick]');
+  if(el&&!el.closest('#modal')||el&&el.closest('#mbox')){e.preventDefault();e.stopImmediatePropagation();fwdClick(el,'click');
+    if(el.closest('#mbox')&&/closeModal\(\)/.test(el.getAttribute('onclick'))&&!/endShift/.test(el.getAttribute('onclick')))$('#modal').classList.add('hidden')}
+},true);
+document.addEventListener('change',e=>{
+  if(ROLE!=='remote')return;const el=e.target.closest('[onchange]');
+  if(el&&el.closest('#phone,#cadInc,#radio,#mbox')){e.stopImmediatePropagation();fwdClick(el,'chg',el.value)}
+},true);
+function onAct(m){
+  if(ROLE!=='primary'||!S||!S.running)return;
+  S.curSender=m.from;
+  try{
+    (m.vals.st||[]).forEach(([id,v])=>{const el=$('#'+id);if(el&&id!=='pttUnit'||el&&v)el.value=v});
+    if(m.id==='lType'){}
+    const mbx=[...document.querySelectorAll('#mbox input,#mbox select,#mbox textarea')];
+    if(m.box==='mbox')(m.vals.mb||[]).forEach(([v,c],i)=>{if(mbx[i]){mbx[i].value=v;if(mbx[i].type==='checkbox')mbx[i].checked=c}});
+    if(m.id){$('#'+m.id).click()}
+    else if(m.close){closeModal()}
+    else{const box=$('#'+m.box);if(box){const all=[...box.querySelectorAll('[onclick],[onchange]')].filter(x=>(x.getAttribute('onclick')||x.getAttribute('onchange'))===m.on);
+      const el=all[m.nth]||all[0];if(el){if(m.kind==='chg'){el.value=m.value;el.dispatchEvent(new Event('change'))}else el.click()}}}
+  }catch(err){console.warn(err)}
+  S.curSender=null;snap(true);
+}
+if(bc)bc.onmessage=e=>{const m=e.data;if(!m||m.from===ME)return;
+  if(m.type==='hb'){lastHB=Date.now();PRIM=m.from;if(ROLE===null)showJoin(m)}
+  else if(m.type==='snap'&&m.from===PRIM)onSnap(m);
+  else if(m.type==='act')onAct(m);
+  else if(m.type==='hello'&&ROLE==='primary'){lastSent={};snap(true)}
+  else if(m.type==='focus')focusInc(m.id,false);
+  else if(m.type==='toast'&&ROLE==='remote')toast(m.cls,m.text);
+  else if(m.type==='lp'&&m.to===ME){setCadView('leads');lPrefill(m.ty,m.v)}
+  else if(m.type==='end'&&ROLE==='remote'){$('#app').classList.add('hidden');const r=$('#report');r.classList.remove('hidden');r.innerHTML=m.html.replace(/<button class="go"[^]*$/,'')+'<div class="card">The shift ended on the main screen.</div>'}
+};
+setInterval(()=>{
+  if(ROLE==='primary'&&S&&S.running)post({type:'hb',info:`${S.diff} · ${fmt(S.t)} elapsed`});
+  if(ROLE==='remote'&&Date.now()-lastHB>5000)$('#lostBanner').classList.remove('hidden');
+  if(ROLE===null&&Date.now()-lastHB>4000)$('#joinCard').classList.add('hidden');
+},1000);
+function showJoin(m){const c=$('#joinCard');c.classList.remove('hidden');$('#joinInfo').textContent=m.info||''}
+function joinAs(lay){
+  ROLE='remote';$('#start').classList.add('hidden');$('#app').classList.remove('hidden');document.body.classList.add('remote');
+  setLayout(lay);setCadView(lay==='leads'?'leads':lay==='cad'?'inc':CADV);cmdHint();post({type:'hello'});
+}
+function toast(cls,text){const d=document.createElement('div');d.className=cls;d.textContent=text;$('#toast').appendChild(d);setTimeout(()=>d.remove(),3200);while($('#toast').children.length>3)$('#toast').firstChild.remove()}
+function setLayout(v){
+  const m=$('main');m.className='lay-'+v;$('#layout').value=v;document.body.classList.toggle('solo',v!=='all');
+  if(v==='leads')setCadView('leads');
+  setTimeout(drawMaps,30);
+}
+function applyRadioFilter(){document.querySelectorAll('#radio .rmsg').forEach(e=>e.style.display=RFILT==='ALL'||e.dataset.tg===RFILT?'':'none')}
+let RFILT='ALL';
+
+/* =================== MODAL / NAV =================== */
+function modal(h){$('#mbox').innerHTML=h;bindModal();
+  if(S){S.modalV=(S.modalV||0)+1;S.modalOwner=S.curSender||'local';S.modalLast=S.modalOwner}
+  $('#modal').classList.toggle('hidden',!!(S&&S.modalOwner!=='local'))}
+function closeModal(){
+  if(ROLE==='remote'){$('#modal').classList.add('hidden');post({type:'act',close:true,vals:collect()});return}
+  $('#modal').classList.add('hidden');if(S)S.modalOwner=null}
+function bindModal(){const n=$('#mNat');if(n)n.onchange=e=>{const x=NAT[e.target.value];if(x)$('#mPri').value=x.p}}
+$('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
+function showTab(t){document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('on',x.dataset.t===t&&(!x.dataset.v||x.dataset.v===CADV)));['pPhone','pCad','pRadio','pBottom'].forEach(id=>$('#'+id).classList.toggle('show',id===t))}
+document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{if(b.dataset.v)setCadView(b.dataset.v);
+  document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('on',x===b));
+  ['pPhone','pCad','pRadio','pBottom'].forEach(id=>$('#'+id).classList.toggle('show',id===b.dataset.t));
+});
+
+/* =================== START / END =================== */
+let loop;
+$('#btnStart').onclick=()=>{
+  S=newState();initDuty(S);ROLE='primary';lastSent={};seenInc.clear();ac()&&AC.resume&&AC.resume();
+  try{if(S.voice!=='0'){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance('Logged on.');u.volume=.6;speechSynthesis.speak(u)}}catch(e){}
+  $('#start').classList.add('hidden');$('#report').classList.add('hidden');$('#app').classList.remove('hidden');
+  setCadView('inc');renderLeadsOut();cmdHint();renderCmdLog();
+  last=performance.now();render();clearInterval(loop);loop=setInterval(tick,250);
+  radioOut('SO44DSP','904 to all units, dispatcher on duty, time is '+new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})+'.');render();
+};
+$('#btnPause').onclick=()=>{S.paused=!S.paused;$('#btnPause').textContent=S.paused?'Resume':'Pause';if(S.paused)try{speechSynthesis.cancel()}catch(e){};last=performance.now()};
+$('#btnEnd').onclick=()=>modal(`<h3>End your shift now?</h3><div class="dim">You'll get your shift report and score.</div><div class="acts" style="margin-top:12px"><button onclick="closeModal()">Keep working</button><button class="warn" onclick="closeModal();endShift()">End shift</button></div>`);
+$('#btnNewInc').onclick=()=>openNewInc(null);
+$('#btnStatusChk').onclick=statusCheck;
+$('#vInc').onclick=()=>setCadView('inc');$('#vLeads').onclick=()=>setCadView('leads');$('#vMap').onclick=()=>setCadView('map');
+$('#layout').onchange=e=>setLayout(e.target.value);
+$('#tgs').addEventListener('click',e=>{const b=e.target.closest('[data-tgf]');if(!b)return;RFILT=b.dataset.tgf;document.querySelectorAll('#tgs button').forEach(x=>x.classList.toggle('on',x===b));applyRadioFilter()});
+document.addEventListener('click',e=>{const b=e.target.closest('[data-focus]');if(b){focusInc(+b.dataset.focus,true)}});
+if(!$('#tgs').children.length)$('#tgs').innerHTML=['ALL','SO44DSP','FD44DISP','IRON FIRE','EMS44DSP','XSO-44'].map(t=>`<button data-tgf="${t}" class="${t==='ALL'?'on':''}">${t}</button>`).join('');
+window.addEventListener('resize',()=>drawMaps());
+$('#btnMon').onclick=()=>{const h=`<h3>Use more monitors</h3><div style="line-height:1.5">
+ <p>This window runs the shift. To add another screen:</p>
+ <ol><li>Open this same simulator link in a <b>new browser window</b> and drag it to your other monitor.</li>
+ <li>On its start screen, a green <b>"A shift is running in another window"</b> box appears. Pick what that screen shows: Phones + CAD, CAD, Map, Radio, LEADS, Unit board, or Phones.</li>
+ <li>Repeat for as many monitors as you have. Use the <b>Screen</b> menu up top to change what any window shows, including this one.</li></ol>
+ <p class="dim">Example console: monitor 1 Phones + CAD, monitor 2 Map, monitor 3 Radio + LEADS. Audio plays from this main window. Keep it open; closing it ends the shift. All windows must be in the same browser on the same computer.</p></div>
+ <div class="acts"><button onclick="closeModal()">Got it</button></div>`;
+ if(ROLE==='remote'){$('#mbox').innerHTML=h.replace('onclick="closeModal()"','');$('#modal').classList.remove('hidden');$('#mbox button').onclick=e=>{e.stopImmediatePropagation();$('#modal').classList.add('hidden')}}else modal(h)};
+$('#lType').onchange=lFields;$('#lGo').onclick=leadsTx;lFields();
+document.querySelectorAll('#leads input').forEach(i=>i.addEventListener('keydown',e=>{if(e.key==='Enter')$('#lGo').click()}));
+$('#cmd').addEventListener('input',cmdHint);$('#cmd').addEventListener('keydown',e=>{if(e.key==='Enter')$('#cmdGo').click()});$('#cmdGo').onclick=runCmd;
+function endShift(){
+  S.running=false;clearInterval(loop);try{speechSynthesis.cancel()}catch(e){}
+  setTimeout(()=>post({type:'end',html:$('#report').innerHTML}),50);
+  const st=S.st,avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+  const answered=st.ans.length;
+  const pct15=answered?Math.round(st.answered15/answered*100):0;
+  const per=st.calls?S.score/st.calls:0;
+  const g=per>=30?'A':per>=22?'B':per>=14?'C':per>=6?'D':'F';
+  $('#app').classList.add('hidden');const r=$('#report');r.classList.remove('hidden');
+  r.innerHTML=`<span class="badge" style="font-family:var(--mono);font-size:11px;color:var(--amber);border:1px solid #6b4b0c;padding:2px 8px;border-radius:20px">END OF SHIFT REPORT</span>
+  <div class="card" style="display:flex;gap:20px;align-items:center"><div class="grade">${g}</div><div><div style="font-size:22px;font-weight:700">${S.score} points</div><div class="dim">${fmt(S.t)} on the floor · ${S.diff} volume · ${per.toFixed(1)} pts/call</div></div></div>
+  <div class="card kv">
+    <div>Calls received</div><div>${st.calls}</div>
+    <div>Calls answered</div><div>${answered}</div>
+    <div>Answered within 15 s</div><div>${pct15}%</div>
+    <div>Average answer time</div><div>${avg(st.ans).toFixed(1)} s</div>
+    <div>Abandoned while ringing</div><div>${st.abandoned}</div>
+    <div>Correct nature codes</div><div>${st.codesRight}/${st.codesTot}</div>
+    <div>Avg P1 answer→dispatch</div><div>${st.p1disp.length?avg(st.p1disp).toFixed(0)+' s':'—'}</div>
+    <div>Avg radio acknowledgment</div><div>${st.acks.length?avg(st.acks).toFixed(1)+' s':'—'}</div>
+    <div>Missed radio transmissions</div><div>${st.missedAcks}</div>
+    <div>Correct / wrong transfers</div><div>${st.xferOk} / ${st.xferBad}</div>
+    <div>Duplicate callers linked</div><div>${st.dup}</div>
+  </div>
+  <div class="card"><b>Scoring log</b><div class="ev">${S.ev.map(e=>`<div class="${e.n>=0?'p':'m'}">${fmt(e.t)}  ${e.n>=0?'+':''}${e.n}  ${esc(e.why)}</div>`).join('')||'—'}</div></div>
+  <div class="row"><button class="go" onclick="$('#btnStart').click()" style="padding:12px">Start another shift</button><button onclick="location.reload()" style="padding:12px">Change settings</button></div>`;
+  window.scrollTo(0,0);
+}
+</script>
+</body>
+</html>
