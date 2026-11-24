@@ -250,7 +250,7 @@ body.solo nav#tabs{display:none!important}
     </section>
     <section class="pnl" id="pCad">
       <h2>CAD <button id="vInc" class="vt on">Incidents</button><button id="vLeads" class="vt">LEADS</button><button id="vMap" class="vt">Map</button><span class="sp"></span><button id="btnNewInc" style="padding:3px 8px;font-size:11px">+ New incident</button></h2>
-      <div class="cmdbar"><span class="mono" style="color:var(--green)">CMD&gt;</span><input id="cmd" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="D 803 Medic 2 · RQ HFY5034 · HELP"><button id="cmdGo">Enter</button></div>
+      <div class="cmdbar"><span class="mono" style="color:var(--green)">CMD&gt;</span><input id="cmd" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="D 803 Medic 21 · RQ HFY5034 · HELP"><button id="cmdGo">Enter</button></div>
       <div class="cmdhint mono" id="cmdHint"></div>
       <pre class="cmdlog" id="cmdLog"></pre>
       <div class="body" id="cad">
@@ -524,12 +524,14 @@ function mkUnits(){
   add('751','LE','Athalia PD','ATH','SO44DSP',{agency:'APD'});
   add('OSHP-1','LE','Ohio State Hwy Patrol','COAL','XSO-44',{agency:'OSHP'});
   add('OSHP-2','LE','Ohio State Hwy Patrol','CHES','XSO-44',{agency:'OSHP'});
+  add('EMS 91','EMS','Lawrence Co. EMS · Countywide supervisor','COAL','EMS44DSP',{sup:true});
   // Fire — one engine per department (+ Ironton truck)
   const fdHome={'100':'AID','200':'BURL','300':'CHES','400':'COAL','500':'DEC','600':'ELIZ','700':'BURL','800':'HAM','900':'IRON','1100':'LAWT','1200':'PROC','1300':'ROME','1400':'SPT','1500':'UPPER','1600':'WIND','1700':'WASH','2100':'PERRY'};
   Object.keys(fdHome).forEach(n=>add('E-'+n,'FIRE',FDN[n],fdHome[n],n==='900'?'IRON FIRE':'FD44DISP',{fd:n,vol:n!=='900'}));
   add('L-900','FIRE',FDN['900'],'IRON','IRON FIRE',{fd:'900',vol:false});
   // EMS
-  [['Medic 1','COAL'],['Medic 2','IRON'],['Medic 3','SPT'],['Medic 4','CHES'],['Medic 5','PROC'],['Medic 6','LAWT'],['Medic 7','WIND']].forEach(([i,h])=>add(i,'EMS','Lawrence Co. EMS',h,'EMS44DSP'));
+  // Station 1 = Medic 11/12, Station 2 = Medic 21, then 31-61. Station locations other than Coal Grove HQ are placeholders.
+  [['Medic 11','COAL','Station 1'],['Medic 12','COAL','Station 1'],['Medic 21','IRON','Station 2'],['Medic 31','SPT','Station 3'],['Medic 41','CHES','Station 4'],['Medic 51','PROC','Station 5'],['Medic 61','LAWT','Station 6']].forEach(([i,h,st])=>add(i,'EMS','Lawrence Co. EMS · '+st,h,'EMS44DSP'));
   return U;
 }
 
@@ -745,7 +747,8 @@ function recommend(inc){
     const u=near(f);if(u)rec.push(u.id);
     if(inc.nat==='SF'){const m=near(av.filter(x=>x.type==='FIRE'&&!rec.includes(x.id)&&x.fd!==z.fd));if(m)rec.push(m.id)}
   }
-  if(need.includes('EMS')){const u=near(av.filter(x=>x.type==='EMS'));if(u)rec.push(u.id)}
+  if(need.includes('EMS')){const u=near(av.filter(x=>x.type==='EMS'&&!x.sup));if(u)rec.push(u.id);
+    if(['SF','MVAI','WATER'].includes(inc.nat)){const sv=av.find(x=>x.sup);if(sv)rec.push(sv.id)}}
   return rec;
 }
 function openAssign(iid){
@@ -849,7 +852,7 @@ function unitReq(u){
   }else if(k==='backup'){
     radioIn(u,`Send me another unit, Code 10, ${inc.loc}.`,{due:S.t+12,actions:[{k:'bu',l:'Send nearest LE',fn:(u)=>sendBackup(u,inc,1)}]});
   }else if(k==='ems'){
-    radioIn(u,`Start me a Signal 29, female with a facial injury. Scene is secure.`,{actions:[{k:'ems',l:'Send nearest medic (Signal 29)',fn:()=>{const z=Z[inc.zk];const m=S.units.filter(x=>x.type==='EMS'&&x.st==='AV').sort((a,b)=>dist(a.pos,z)-dist(b.pos,z))[0];if(m){dispatchUnits(inc,[m.id]);pts(6,'EMS sent on officer request')}else pts(-2,'No EMS available')}}]});
+    radioIn(u,`Start me a Signal 29, female with a facial injury. Scene is secure.`,{actions:[{k:'ems',l:'Send nearest medic (Signal 29)',fn:()=>{const z=Z[inc.zk];const m=S.units.filter(x=>x.type==='EMS'&&!x.sup&&x.st==='AV').sort((a,b)=>dist(a.pos,z)-dist(b.pos,z))[0];if(m){dispatchUnits(inc,[m.id]);pts(6,'EMS sent on officer request')}else pts(-2,'No EMS available')}}]});
   }
 }
 function sendBackup(u,inc,n){
@@ -1102,7 +1105,7 @@ const CMDS=[
  ['HELP','HELP — list commands']];
 function cmdHint(){const v=$('#cmd').value.trim().toUpperCase();const w=v.split(/\s+/)[0];
   const m=CMDS.filter(c=>!w||c[0].startsWith(w)||w.startsWith(c[0]));
-  $('#cmdHint').textContent=v?(m.length?m.slice(0,3).map(c=>c[1]).join('   ·   '):'Unknown command — type HELP'):'Type a command (HELP). e.g. D 803 Medic 2 · RQ HFY5034 · QW ADKINS,LINDA,03141988';}
+  $('#cmdHint').textContent=v?(m.length?m.slice(0,3).map(c=>c[1]).join('   ·   '):'Unknown command — type HELP'):'Type a command (HELP). e.g. D 803 Medic 21 · RQ HFY5034 · QW ADKINS,LINDA,03141988';}
 function runCmd(){
   const raw=$('#cmd').value.trim();if(!raw)return;$('#cmd').value='';cmdHint();
   S.cmdLog=(S.cmdLog||[]);S.cmdLog.unshift('> '+raw);
@@ -1197,10 +1200,10 @@ function unitTick(u){
     if(u.type==='LE'&&chance(.55))u.reqAt=S.t+ri(12,35);
   }else if(u.st==='OS'){
     if(u.reqAt&&S.t>=u.reqAt){u.reqAt=null;unitReq(u);u.next=S.t+ri(30,70);return}
-    if(u.type==='EMS'&&inc&&chance(.75)){
+    if(u.type==='EMS'&&!u.sup&&inc&&chance(.75)){
       u.st='TR';u.dest=pick(u.home==='PROC'||u.home==='CHES'||u.home==='WIND'?HOSP.slice(1,3):u.home==='DEC'?[HOSP[3]]:HOSP.slice(0,3));
       u.next=S.t+ri(40,80);{const hi=HOSP.indexOf(u.dest);const hp=HOSPS[hi]||{lat:38.74,lon:-82.83};u.hp=hp;u.mv={a:{...u.pos},b:{lat:hp.lat,lon:hp.lon},t0:S.t,t1:u.next}}radioIn(u,`${u.id} transporting one to ${u.dest}, priority ${ri(2,3)}.`);
-    }else{u.st='AV';u.inc=null;goHome(u);radioIn(u,u.type==='EMS'?`${u.id}, patient refusal. Back in service.`:u.type==='FIRE'?`${u.id}, all clear, returning to quarters.`:`${u.id}, Signal 33.`);maybeClose(inc)}
+    }else{u.st='AV';u.inc=null;goHome(u);radioIn(u,u.type==='EMS'?(u.sup?`${u.id}, clearing the scene, back in service.`:`${u.id}, patient refusal. Back in service.`):u.type==='FIRE'?`${u.id}, all clear, returning to quarters.`:`${u.id}, Signal 33.`);maybeClose(inc)}
   }else if(u.st==='TR'){u.st='AH';if(u.hp)u.pos={lat:u.hp.lat,lon:u.hp.lon};delete u.mv;u.next=S.t+ri(30,60);radioIn(u,`${u.id} at destination.`)}
   else if(u.st==='AH'){u.st='AV';u.inc=null;goHome(u);radioIn(u,`${u.id} back in service.`);maybeClose(inc)}
 }
