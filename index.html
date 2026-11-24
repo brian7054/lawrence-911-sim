@@ -155,6 +155,13 @@ td button{padding:3px 7px;font-size:11px;margin:1px}
 .cms{background:#06121c;border:1px solid #1e3a5f;border-radius:6px;padding:8px}
 #adminView td button{margin:1px}
 @media print{body.printing *{visibility:hidden}body.printing #printLog,body.printing #printLog *{visibility:visible;color:#000!important;background:#fff!important}body.printing #printLog{position:absolute;left:0;top:0;width:100%}body.printing #modal{background:#fff}}
+#tones{padding:6px 8px;border-top:1px solid var(--line);background:#0b1118}
+.tnh{display:flex;justify-content:space-between;font-size:10px;letter-spacing:1px;color:var(--dim);margin:2px 0 4px}
+.tng{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:3px;margin-bottom:4px}
+.tn{padding:4px 0;font-family:var(--mono);font-size:11px}
+.tn.sel{background:#1e3a5f;border-color:var(--blue);color:#fff}
+.tn.pendt{border-color:var(--amber);color:var(--amber);animation:flash 1.2s infinite}
+.tn.sel.pendt{color:#fff}
 /* maps */
 .mapbody{padding:0!important;position:relative}
 .mapwrap{position:relative;width:100%;height:100%;min-height:200px;overflow:hidden;touch-action:none}
@@ -302,6 +309,7 @@ body.solo nav#tabs{display:none!important}
       <h2>📻 Radio — MARCS <span class="sp"></span><span class="mono" id="rdSum"></span></h2>
       <div class="tgs" id="tgs"></div>
       <div class="body" id="radio"></div>
+      <div id="tones"></div>
       <div class="ptt">
         <select id="pttUnit" style="flex:1"></select>
         <button id="btnStatusChk">Status check</button>
@@ -802,16 +810,18 @@ function dispatchUnits(inc,ids){
     u.st='DP';u.inc=inc.id;u.dpAt=S.t;delete u.mv;inc.units.push(u.id);
     u.noResp=u.vol&&chance(.18);
     u.next=S.t+(u.type==='FIRE'?(u.vol?ri(25,60):ri(8,15)):ri(5,12));
+    const key=toneKey(u);
+    if(key){u.needTone=key;u.next=Infinity;S.pendTone=S.pendTone||{};const pt=S.pendTone[key]||(S.pendTone[key]={t:S.t,units:[],inc:inc.id});pt.units.push(u.id);pt.inc=inc.id}
     if(u.type==='FIRE')fire.push(u);
   });
   if(inc.status==='pend')inc.status='disp';
   const first=inc.firstDisp===null;if(first)inc.firstDisp=S.t;
   // outgoing radio
-  const byTg={};ids.forEach(id=>{const u=S.units.find(x=>x.id===id);(byTg[u.tg]=byTg[u.tg]||[]).push(u.id)});
-  if(fire.length){sfx.pager();}
+  const byTg={};ids.forEach(id=>{const u=S.units.find(x=>x.id===id);if(u.needTone)return;(byTg[u.tg]=byTg[u.tg]||[]).push(u.id)});
+  if(ids.some(id=>S.units.find(x=>x.id===id).needTone))note('Units dispatched in CAD — tone out the station(s) from the radio Tones panel');
   Object.entries(byTg).forEach(([tg,list])=>{
     const isF=tg==='FD44DISP'||tg==='IRON FIRE';
-    const txt=isF?`911 to ${list.map(i=>'Station '+i.slice(2)).join(', ')}: respond ${NAT[inc.nat].d}, ${inc.loc}, ${z.n}.`
+    const txt=isF?`911 to ${list.map(i=>i).join(', ')}: respond ${NAT[inc.nat].d}, ${inc.loc}, ${z.n}.`
                  :tg==='SO44DSP'?`${list.join(', ')}, 904. ${BSSA[inc.nat]?bw(BSSA[inc.nat])+', '+NAT[inc.nat].d.toLowerCase():NAT[inc.nat].d}, ${inc.loc}, ${z.n}.`
                  :`${list.join(', ')}: respond ${inc.loc}, ${z.n}, for a ${NAT[inc.nat].d.toLowerCase()}.`;
     radioOut(tg,txt);
@@ -825,7 +835,7 @@ function gradeDispatch(inc){
   need.forEach(n=>{if(types.has(n))pts(6,`${n} dispatched`);else pts(-12,`Missing ${n} on #${inc.id} (${c.sc.nat})`)});
   ['LE','FIRE','EMS'].forEach(n=>{if(types.has(n)&&!need.includes(n)&&!(n==='EMS'&&['DOM'].includes(c.sc.nat)))pts(-3,`${n} not needed on ${c.sc.nat}`)});
   const z=Z[c.zk];
-  if(need.includes('FIRE')){if(inc.units.some(id=>S.units.find(u=>u.id===id).fd===z.fd))pts(6,`Home department ${z.fd} toned`);else pts(-6,`Home department (${FDN[z.fd]}) not sent`)}
+  if(need.includes('FIRE')){if(inc.units.some(id=>S.units.find(u=>u.id===id).fd===z.fd))pts(6,`Home department ${z.fd} assigned`);else pts(-6,`Home department (${FDN[z.fd]}) not sent`)}
   if(need.includes('LE')){const ag=inc.units.map(id=>S.units.find(u=>u.id===id).agency);
     if(ag.includes(z.le))pts(4,`Correct jurisdiction (${z.le})`);
     else if(z.le!=='LCSO'){const free=S.units.some(u=>u.agency===z.le&&u.st==='AV');
@@ -1140,6 +1150,7 @@ const CMDS=[
  ['QW','QW <LAST,FIRST,MMDDYYYY> — LEADS person/warrant query'],
  ['QR','QR <LAST,FIRST,MMDDYYYY> C — criminal history (purpose code)'],
  ['L','L — switch to LEADS · I — switch to incidents'],
+ ['T','T <fire stn> [M<ems stn>] … — tone out, e.g. T 800 1500 M2'],
  ['MU','MU <unit> <station#> — move a medic up to cover a station'],
  ['HELP','HELP — list commands']];
 function cmdHint(){const v=$('#cmd').value.trim().toUpperCase();const w=v.split(/\s+/)[0];
@@ -1172,6 +1183,7 @@ function runCmd(){
   if(c==='REC'){const inc=args[0]?findInc(args[0]):newest();if(!inc)return say2('NO INCIDENT');openAssign(inc.id);return say2('REC #'+inc.id+': '+(recommend(inc).join(', ')||'NONE'))}
   if(c==='CL'){const inc=findInc(args[0]||'');if(!inc)return say2('NO INCIDENT');closeInc(inc.id);return say2('CLOSE #'+inc.id)}
   if(c==='NOTE'){const inc=findInc(args[0]||'');if(!inc)return say2('NO INCIDENT');inc.notes+=`\n[${fmt(S.t)}] `+raw.split(/\s+/).slice(2).join(' ');return say2('NOTE ADDED #'+inc.id)}
+  if(c==='T'||c==='TONE'){const ks=args.map(a=>/^M\d$/.test(a)?'EMS'+a.slice(1):'FD'+a).filter(k=>k.startsWith('EMS')?EMS_ST[k.slice(3)]:FD_TONE.includes(k.slice(2)));if(!ks.length)return say2('T <STN> … e.g. T 800 M2');toneOut(ks);return say2('TONED '+ks.map(toneLabel).join(', '))}
   if(c==='MU'){const toks=raw.split(/\s+/).slice(1);const n=+toks.pop();const t=toks.join(' ').toUpperCase();const u=S.units.find(x=>x.id.toUpperCase()===t);
     if(!u||u.type!=='EMS'||!EMS_ST[n])return say2('MU <MEDIC ##> <STATION 1-6>');moveUp(u.id,n);return say2(`MOVE-UP ${u.id} TO STN ${n}`)}
   if(c==='ST'){const t=raw.split(/\s+/).slice(1).join(' ').toUpperCase();const u=S.units.find(x=>x.id.toUpperCase()===t);if(!u)return say2('UNKNOWN UNIT');return say2(`${u.id} ${u.st} ${u.inc?'#'+u.inc:''} ${u.ag}`)}
@@ -1377,6 +1389,42 @@ function adminTick(){
   towTick();
 }
 
+/* =================== TONE-OUTS =================== */
+// Volunteer fire stations (all but Ironton 900) and EMS crews in quarters must be toned out. EMS units out in the area (marked on MARCS) are dispatched by voice.
+const FD_TONE=Object.keys(FDN).filter(n=>n!=='900');
+function inQuarters(u){const st=EMS_ST[u.cover||u.stn];return st&&!u.mv&&dist(u.pos,st)<0.6}
+function toneKey(u){if(u.type==='FIRE'&&u.vol)return 'FD'+u.fd;if(u.type==='EMS'&&!u.sup&&inQuarters(u))return 'EMS'+(u.cover||u.stn);return null}
+const toneLabel=k=>k.startsWith('FD')?'Station '+k.slice(2):'EMS Station '+k.slice(3);
+function toggleTone(k){S.toneSel=S.toneSel||[];const i=S.toneSel.indexOf(k);if(i<0)S.toneSel.push(k);else S.toneSel.splice(i,1);renderTones()}
+function toneOut(keys){
+  keys=keys||S.toneSel||[];if(!keys.length){note('Select one or more stations to tone.');return}
+  S.toneSel=[];const byInc={};
+  keys.forEach((k,ix)=>{
+    setTimeout(()=>sfx.pager(),ix*4200);
+    const pt=S.pendTone&&S.pendTone[k];
+    if(!pt){pts(-3,`Toned ${toneLabel(k)} with nothing assigned`);return}
+    delete S.pendTone[k];const dt=S.t-pt.t;
+    pts(dt<=30?4:dt<=60?1:-4,`${toneLabel(k)} toned ${Math.round(dt)}s after dispatch`);
+    pt.units.forEach(id=>{const u=S.units.find(x=>x.id===id);if(!u||u.needTone!==k)return;delete u.needTone;
+      u.next=S.t+keys.length*4+(u.type==='FIRE'?ri(25,60):ri(30,55));(byInc[pt.inc]=byInc[pt.inc]||{f:[],e:[]})[u.type==='FIRE'?'f':'e'].push(k)});
+  });
+  Object.entries(byInc).forEach(([iid,g])=>{const inc=S.incidents.find(i=>i.id===+iid);if(!inc)return;const z=Z[inc.zk];
+    setTimeout(()=>{if(!S.running)return;
+      if(g.f.length)radioOut('FD44DISP',`911 to ${g.f.map(toneLabel).join(', ')}: respond ${NAT[inc.nat].d}, ${inc.loc}, ${z.n}. Time out ${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hour12:false})}.`);
+      if(g.e.length)radioOut('EMS44DSP',`Dispatch to ${g.e.map(toneLabel).join(', ')}: respond ${NAT[inc.nat].d.toLowerCase()}, ${inc.loc}, ${z.n}.`)},keys.length*4200);
+  });
+  renderTones();render();
+}
+function toneTick(){Object.entries(S.pendTone||{}).forEach(([k,pt])=>{if(!pt.warned&&S.t-pt.t>60){pt.warned=true;pts(-5,`${toneLabel(k)} assigned in CAD but never toned out`);
+  radioIn(null,`CAD: ${toneLabel(k)} has units assigned that have not been toned out.`,{from:'CAD',tg:k.startsWith('FD')?'FD44DISP':'EMS44DSP',due:S.t+30,actions:[{k:'tn',l:`Tone ${toneLabel(k)} now`,fn:()=>toneOut([k])}]})}})}
+function renderTones(){
+  const el=$('#tones');if(!el||!S)return;const sel=S.toneSel||[],pend=S.pendTone||{};
+  const b=k=>`<button class="tn ${sel.includes(k)?'sel':''} ${pend[k]?'pendt':''}" onclick="toggleTone('${k}')">${k.startsWith('FD')?k.slice(2):'M'+k.slice(3)}</button>`;
+  setHTML(el,`<div class="tnh"><span>TONES — Fire</span><span class="dim">amber = assigned, waiting for tones</span></div><div class="tng">${FD_TONE.map(n=>b('FD'+n)).join('')}</div>
+    <div class="tnh"><span>EMS stations</span></div><div class="tng">${Object.keys(EMS_ST).map(n=>b('EMS'+n)).join('')}
+    <button class="go" style="grid-column:span 2" onclick="toneOut()">🔔 Tone ${sel.length?sel.length+' selected':'selected'}</button>
+    ${Object.keys(pend).length?`<button class="warn" style="grid-column:span 2" onclick="toneOut(Object.keys(S.pendTone))">Tone all waiting (${Object.keys(pend).length})</button>`:''}</div>`);
+}
 /* =================== GAME LOOP =================== */
 let last=0;
 function tick(){
@@ -1397,7 +1445,7 @@ function tick(){
   // phone ring sound
   if(Math.floor(S.t/2.5)!==Math.floor((S.t-dt)/2.5)){if(S.lines.some(c=>c&&c.state==='ring'&&!c.sc.text&&!c.sc.admin))sfx.ring();else if(S.lines.some(c=>c&&c.state==='ring'&&c.sc.text))sfx.txt();else if(S.lines.some(c=>c&&c.state==='ring'))sfx.adm()}
   S.lines.forEach(c=>{if(c&&c.q&&c.q.length&&S.t>=c.q[0].t){tx(c,'caller',c.q.shift().text);if(c===S.active)renderPhone()}});
-  adminTick();
+  adminTick();toneTick();
   // units
   S.units.forEach(u=>{unitTick(u);if(u.mv){const f=Math.min(1,(S.t-u.mv.t0)/Math.max(1,u.mv.t1-u.mv.t0));u.pos=lerp(u.mv.a,u.mv.b,f);if(f>=1&&u.st!=='ER')delete u.mv}});
   if(Math.floor(S.t*2)!==Math.floor((S.t-dt)*2)){drawMaps();snap()}
@@ -1419,7 +1467,7 @@ function tick(){
 function unitTick(u){
   if(!['DP','ER','OS','TR','AH'].includes(u.st)||S.t<u.next)return;
   const inc=S.incidents.find(i=>i.id===u.inc);const z=inc?Z[inc.zk]:Z[u.home];
-  if(u.st==='DP'){
+  if(u.st==='DP'){if(u.needTone)return;
     if(u.noResp){u.noResp=false;u.next=S.t+9999;u.st='DP';
       radioIn(null,`No response from Station ${u.fd} (${FDN[u.fd]}) after page. No crew has marked en route.`,{from:'CAD',tg:'FD44DISP',due:S.t+25,
         actions:[{k:'retone',l:`Re-tone Station ${u.fd}`,group:'nr',fn:()=>{sfx.pager();radioOut('FD44DISP',`Second page, Station ${u.fd}, respond ${inc?NAT[inc.nat].d:''}, ${inc?inc.loc:''}.`);pts(4,'Re-toned volunteer station');
@@ -1488,7 +1536,7 @@ function goHome(u){const h=u.cover?EMS_ST[u.cover]:u.stn?EMS_ST[u.stn]:Z[u.home]
 function maybeClose(inc){if(!inc)return;if(inc.units.every(id=>{const u=S.units.find(x=>x.id===id);return u.inc!==inc.id})){inc.status='closed';inc.closedAt=S.t}}
 
 /* =================== RENDER =================== */
-function render(){renderPhone();renderCad();renderAdmin();renderRadio();renderUnits();drawMaps();renderLite()}
+function render(){renderPhone();renderCad();renderAdmin();renderTones();renderRadio();renderUnits();drawMaps();renderLite()}
 let lastSig='';
 function renderLite(){
   $('#clk').textContent=fmt(S.t);$('#left').textContent=fmt(S.len-S.t);$('#score').textContent=S.score;
@@ -1499,7 +1547,7 @@ function renderLite(){
   dot('#dPh',ringing);dot('#dRd',need);dot('#dCad',pend);
   // periodic refresh of time-dependent bits
   const sig=Math.floor(S.t)+'|'+S.lines.map(c=>c?c.state:'-').join()+'|'+S.units.map(u=>u.st).join('')+'|'+S.radio.length;
-  if(sig!==lastSig){lastSig=sig;renderPhoneLines();renderCad();renderAdmin();renderUnits();if(S.radio.length!==renderRadio.n)renderRadio()}
+  if(sig!==lastSig){lastSig=sig;renderPhoneLines();renderCad();renderAdmin();renderTones();renderUnits();if(S.radio.length!==renderRadio.n)renderRadio()}
 }
 function dot(sel,n){const d=$(sel);if(n){d.textContent=n;d.classList.remove('hidden')}else d.classList.add('hidden')}
 function renderPhoneLines(){
@@ -1545,7 +1593,7 @@ function renderPhone(){
 function renderCad(){
   const rows=S.incidents.slice(0,40).map(i=>{
     const z=Z[i.zk];
-    const us=i.units.map(id=>{const u=S.units.find(x=>x.id===id);return `<span class="ub ${u.inc===i.id?u.st:'OOS'}">${id} ${u.inc===i.id?u.st:'CLR'}</span>`}).join('');
+    const us=i.units.map(id=>{const u=S.units.find(x=>x.id===id);return `<span class="ub ${u.inc===i.id?u.st:'OOS'}">${u.needTone?'🔔':''}${id} ${u.inc===i.id?(u.needTone?'TONE':u.st):'CLR'}</span>`}).join('');
     return `<tr class="p${i.pri} ${i.status==='pend'?'pend':''} ${i.status==='closed'?'closed':''}">
       <td>#${i.id}<br><span class="dim">${fmt(S.t-i.created)}</span></td><td>P${i.pri}</td><td><b>${i.nat}</b>${BSSA[i.nat]?` <span style="color:var(--cyan)">${bw(BSSA[i.nat])}</span>`:''}<br><span class="dim">${NAT[i.nat].d}</span></td>
       <td>${esc(i.loc)}<br><span class="dim">${z.n} · FD ${z.fd}</span></td><td>${us||'<span style="color:var(--red)">PENDING</span>'}</td>
@@ -1579,7 +1627,7 @@ function coverageHTML(){
 }
 function renderUnits(){
   const g=t=>S.units.filter(u=>u.type===t).map(u=>{const inc=u.inc?S.incidents.find(i=>i.id===u.inc):null;
-    return `<div class="ucard" title="${esc(u.ag)}"><b class="${u.st}">${u.id}</b> <span class="${u.st}">${u.st}</span><div class="ag">${esc(u.ag)}</div><div class="ag">${inc?'#'+inc.id+' '+inc.nat:u.cover?'Covering Stn '+u.cover:u.stn?'Stn '+u.stn+' '+EMS_ST[u.stn].n:Z[u.home].n}</div></div>`}).join('');
+    return `<div class="ucard" title="${esc(u.ag)}"><b class="${u.st}">${u.id}</b> <span class="${u.st}">${u.needTone?'🔔 TONE':u.st}</span><div class="ag">${esc(u.ag)}</div><div class="ag">${inc?'#'+inc.id+' '+inc.nat:u.cover?'Covering Stn '+u.cover:u.stn?'Stn '+u.stn+' '+EMS_ST[u.stn].n:Z[u.home].n}</div></div>`}).join('');
   setHTML($('#units'),`<div class="mono" style="font-size:11px;margin-bottom:4px">${(()=>{const n=nuaList();return n.length?`<span style="color:var(--amber)">NUA (no unit available): ${n.join(', ')}</span> <span class="dim">— send deputies</span>`:'<span class="dim">All village/city PDs have a unit on</span>'})()}</div><div class="dim mono" style="font-size:10.5px">OFF off duty · AV available · DP dispatched · ER en route · OS on scene · TR transporting · AH at hospital</div><div class="ugh">Law</div><div class="ugrid">${g('LE')}</div><div class="ugh">Fire</div><div class="ugrid">${g('FIRE')}</div><div class="ugh">EMS</div><div class="ugrid">${g('EMS')}</div>${coverageHTML()}`);
 }
 /* =================== CAD MAP =================== */
@@ -1662,7 +1710,7 @@ function focusInc(id,bcast){
 const ME=Math.random().toString(36).slice(2,8);let ROLE=null,lastHB=0,PRIM=null,bc=null;
 try{bc=new BroadcastChannel('lc911sim')}catch(e){}
 function post(m){m.from=ME;try{bc&&bc.postMessage(m)}catch(e){}}
-const MIR=['phone','cadInc','adminView','lOut','radio','units','cmdLog','pttUnit','phSum','rdSum','clk','left','score','act'];
+const MIR=['phone','cadInc','adminView','tones','lOut','radio','units','cmdLog','pttUnit','phSum','rdSum','clk','left','score','act'];
 let lastSent={};
 function snap(force){
   if(ROLE!=='primary'||!S||!S.running)return;
@@ -1690,7 +1738,7 @@ function collect(){
   return{st:STATIC_IN.map(id=>[id,$('#'+id).value]),mb:[...document.querySelectorAll('#mbox input,#mbox select,#mbox textarea')].map(x=>[x.value,x.checked])};
 }
 function fwdClick(el,type,value){
-  const box=el.closest('#phone,#cadInc,#adminView,#lOut,#radio,#mbox,#units');const on=el.getAttribute('onclick')||el.getAttribute('onchange');
+  const box=el.closest('#phone,#cadInc,#adminView,#tones,#lOut,#radio,#mbox,#units');const on=el.getAttribute('onclick')||el.getAttribute('onchange');
   if(!box||!on)return;
   const all=[...box.querySelectorAll('[onclick],[onchange]')].filter(x=>(x.getAttribute('onclick')||x.getAttribute('onchange'))===on);
   post({type:'act',kind:type,box:box.id,on,nth:all.indexOf(el),value,vals:collect()});
