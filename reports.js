@@ -50,14 +50,15 @@ const SCHEMA={
    {t:'Narrative',f:[['narr','Narrative* — describe what happened, unit by unit','area']]},
    {t:'Diagram',f:[['diagram','Crash diagram (draw below)','sketch']]}
   ]},
- cite:{title:'Uniform Traffic Ticket',sub:'Training citation ("OH-7") with the Ohio uniform ticket\'s fields',prefix:'TT',
+ cite:{title:'Uniform Traffic Ticket',sub:'Training citation ("OH-7") with the Ohio uniform ticket\'s fields; add a count for each charge',prefix:'TT',
   sections:[
    {t:'Ticket',f:[['tno','Ticket #*','text'],['agency','Agency*','select',AGENCIES],['officer','Officer*','text'],['badge','Badge / unit #*','text']]},
    {t:'Defendant',f:[['dname','Name (last, first, middle)*','text'],['ddob','Date of birth*','date'],['dsex','Sex','select',['M','F','U']],['daddr','Address*','text'],['dcity','City, state, ZIP','text'],
      ['oln','OL #*','text'],['olstate','OL state','select',STATES],['olclass','OL class','select',['D','M','CDL-A','CDL-B','CDL-C','None']],['cdl','CMV / CDL involved','check'],['haz','Hazmat','check']]},
    {t:'Vehicle',f:[['plate','Plate #*','text'],['lpstate','Plate state','select',STATES],['vyr','Year','number'],['vmake','Make','text'],['vmodel','Model','text'],['vcolor','Color','text']]},
-   {t:'Offense',f:[['odate','Offense date*','date'],['otime','Time*','time'],['oloc','Location*','text'],['place','City, village or township*','select',PLACES],['charge','Charge (ORC)*','select',ORC],
-     ['speed','Speed (mph)','number'],['zone','Posted limit','number'],['meth','Speed measured by','select',['','Radar','Laser','Pace','Aircraft','Visual estimate']],['crash','Crash involved','check'],['pav','Pavement','select',['','Dry','Wet','Snow','Ice']],['vis','Visibility','select',['','Clear','Rain','Fog','Night']],['traffic','Traffic','select',['','Light','Moderate','Heavy']]]},
+   {t:'Offense',f:[['odate','Offense date*','date'],['otime','Time*','time'],['oloc','Location*','text'],['place','City, village or township*','select',PLACES],
+     ['crash','Crash involved','check'],['pav','Pavement','select',['','Dry','Wet','Snow','Ice']],['vis','Visibility','select',['','Clear','Rain','Fog','Night']],['traffic','Traffic','select',['','Light','Moderate','Heavy']]]},
+   {t:'Count',rep:'counts',max:6,f:[['charge','Charge (ORC)*','select',ORC],['speed','Speed (mph)','number'],['zone','Posted limit','number'],['meth','Speed measured by','select',['','Radar','Laser','Pace','Aircraft','Visual estimate']],['cnotes','Count details','text']]},
    {t:'Court',f:[['court','Court*','select',COURTS],['cdate','Appear on (date)*','date'],['ctime','Appear at (time)','time'],['waiv','Waiverable offense','check'],['notes','Officer notes','area']]}
   ]},
  inc:{title:'Incident / Offense Report',sub:'Training general incident report',prefix:'IR',
@@ -93,7 +94,7 @@ function ensureShell(){
   const el=document.createElement('div');el.id='rw';el.className='hidden';
   el.innerHTML=`<div class="rw-top"><b>📝 Report writer</b><span class="rw-badge">TRAINING — not an official record</span>
     <span style="flex:1"></span>
-    <button data-rwnew="crash">+ Crash report</button><button data-rwnew="cite">+ Citation (OH-7)</button><button data-rwnew="inc">+ Incident report</button><button id="rwSaved">Saved</button><button id="rwClose" class="warn">Close</button></div>
+    <button data-rwnew="crash">+ Crash report</button><button data-rwnew="cite">+ Citation (OH-7 / multi-count)</button><button data-rwnew="inc">+ Incident report</button><button id="rwSaved">Saved</button><button id="rwClose" class="warn">Close</button></div>
     <div id="rwBody"></div>`;
   document.body.appendChild(el);
   el.addEventListener('click',onClick);el.addEventListener('input',onInput);el.addEventListener('change',onInput);
@@ -114,6 +115,7 @@ function fieldHTML(f,val,id){
 }
 function renderForm(){
   const sc=SCHEMA[CUR.type],d=CUR.data;
+  if(CUR.type==='cite'&&!CUR.reps.counts){CUR.reps.counts=[{charge:d.charge||'',speed:d.speed||'',zone:d.zone||'',meth:d.meth||''}];['charge','speed','zone','meth'].forEach(k=>delete d[k])}
   let h=`<div class="rw-head"><div><h2>${esc(sc.title)}</h2><div class="dim">${esc(sc.sub)} · ${esc(d.rptno||d.tno||'')}</div></div>
     <div class="acts"><button id="rwCheck">✔ Check report</button><button id="rwSave" class="pri">💾 Save</button><button id="rwPdf" class="go">⬇ PDF</button></div></div><div id="rwMsg"></div>`;
   sc.sections.forEach(s=>{
@@ -158,7 +160,8 @@ function missing(){
   if(CUR.data.narr!==undefined&&String(CUR.data.narr||'').trim().length<40&&!m.includes('Narrative* — describe what happened, unit by unit'.replace('*','')))m.push('Narrative is too short (40+ characters)');
   if(CUR.type==='crash'){const n=+CUR.data.nunits;if(n&&n!==CUR.reps.units.length)m.push(`Number of units says ${n}, but ${CUR.reps.units.length} unit section(s) are filled in`);
     if(CUR.data.severity&&/^[1-3]/.test(CUR.data.severity)&&!(CUR.reps.persons||[]).some(p=>p.injury&&!/^5/.test(p.injury)))m.push('Severity shows an injury crash, but no person is marked injured')}
-  if(CUR.type==='cite'&&CUR.data.charge&&/4511\.21 Speed/.test(CUR.data.charge)&&(!CUR.data.speed||!CUR.data.zone))m.push('Speed charge needs speed and posted limit');
+  if(CUR.type==='cite'){(CUR.reps.counts||[]).forEach((c,i)=>{if(/4511\.21 Speed/.test(c.charge||'')&&(!c.speed||!c.zone))m.push(`Count ${i+1}: speed charge needs speed and posted limit`)});
+    const ch=(CUR.reps.counts||[]).map(c=>c.charge).filter(Boolean);if(new Set(ch).size<ch.length)m.push('The same charge is listed on more than one count')}
   return m;
 }
 function check(show){
@@ -276,7 +279,7 @@ window.rwFromCitation=function(c,unit,placeZk){
   const ch=ORC.find(o=>o.startsWith(c.orc+' '))||'';
   const zp={IRON:'Ironton (City)',COAL:'Coal Grove (Village)',HANG:'Hanging Rock (Village)',HAM:'Hamilton Township',SPT:'South Point (Village)',BURL:'Fayette Township',CHES:'Chesapeake (Village)',PROC:'Proctorville (Village)',ATH:'Athalia (Village)',ROME:'Rome Township',WIND:'Windsor Township',PERRY:'Perry Township',LAWT:'Lawrence Township',UPPER:'Upper Township',ELIZ:'Elizabeth Township',WASH:'Washington Township',DEC:'Decatur Township',AID:'Aid Township'};
   openRW('cite',{place:zp[c.zk]||'',tno:c.tno,agency,badge:c.unit,dname:`${P.last}, ${P.first} ${P.mi}`,ddob:iso(P.dob),dsex:P.sex,daddr:P.addr,dcity:`${P.town[0]}, OH ${P.town[1]}`,oln:P.oln,olclass:'D',
-    plate:c.plate,odate:iso(c.date),otime:c.time.slice(0,2)+':'+c.time.slice(2),oloc:c.loc,charge:ch,speed:c.mph?String(c.mph[0]):'',zone:c.mph?String(c.mph[1]):'',court:c.court,cdate:iso(c.cdate),ctime:'09:00'});
+    plate:c.plate,odate:iso(c.date),otime:c.time.slice(0,2)+':'+c.time.slice(2),oloc:c.loc,reps:{counts:[{charge:ch,speed:c.mph?String(c.mph[0]):'',zone:c.mph?String(c.mph[1]):'',meth:c.mph?'Radar':''}]},court:c.court,cdate:iso(c.cdate),ctime:'09:00'});
 };
 document.addEventListener('click',e=>{const b=e.target.closest('[data-rwopen]');if(b){e.preventDefault();e.stopPropagation();openRW(b.dataset.rwopen||null)}},true);
 })();
