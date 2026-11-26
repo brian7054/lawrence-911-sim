@@ -162,6 +162,24 @@ td button{padding:3px 7px;font-size:11px;margin:1px}
 .tn.sel{background:#1e3a5f;border-color:var(--blue);color:#fff}
 .tn.pendt{border-color:var(--amber);color:var(--amber);animation:flash 1.2s infinite}
 .tn.sel.pendt{color:#fff}
+/* report writer */
+#rw{position:fixed;inset:0;z-index:80;background:var(--bg);display:flex;flex-direction:column}
+.rw-top{display:flex;gap:6px;align-items:center;padding:8px 10px;background:#070a0e;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.rw-badge{font-family:var(--mono);font-size:10.5px;color:var(--amber);border:1px solid #6b4b0c;border-radius:20px;padding:2px 8px}
+#rwBody{flex:1;overflow:auto;padding:12px 16px;max-width:1100px;width:100%;margin:0 auto}
+.rw-head{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.rw-head h2{margin:0;font-size:20px}
+.rws{border:1px solid var(--line);border-radius:8px;margin:10px 0;padding:8px 10px 10px;background:var(--panel)}
+.rws legend{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--cyan);padding:0 6px}
+.rwg{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px 10px}
+.rwf.wide{grid-column:1/-1}.rwf.rchk{display:flex;align-items:flex-end;padding-bottom:6px;font-size:13px}.rwf.rchk input{width:auto}
+.rw-add{margin:0 0 6px}.rw-del{margin-top:8px;font-size:12px}
+.rw-warn{background:#3a1d08;border:1px solid #c2410c;border-radius:8px;padding:8px 12px;margin:8px 0}.rw-warn ul{margin:4px 0 0;padding-left:18px}
+.rw-ok{background:#052e1f;border:1px solid #059669;border-radius:8px;padding:8px 12px;margin:8px 0}
+.sk-wrap canvas{width:100%;max-width:900px;aspect-ratio:900/420;border:1px solid var(--line);border-radius:6px;touch-action:none;background:#fff;display:block}
+.sk-tools{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}.sk-tools .on{background:#1e3a5f;border-color:var(--blue)}
+.rwt td button{margin:1px}
+@media (max-width:600px){.rwg{grid-template-columns:minmax(0,1fr)}}
 /* maps */
 .mapbody{padding:0!important;position:relative}
 .mapwrap{position:relative;width:100%;height:100%;min-height:200px;overflow:hidden;touch-action:none}
@@ -233,6 +251,10 @@ body.solo nav#tabs{display:none!important}
     <div style="margin-top:12px"><button class="go" id="btnStart" style="width:100%;padding:12px;font-size:16px">Log on & start shift</button></div>
   </div>
 
+  <div class="card" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+    <div style="flex:1;min-width:220px"><b>📝 Report writer</b><div class="dim" style="font-size:13px">Write a practice crash report (OH-1 fields), citation, or incident report and export a watermarked PDF. No shift needed.</div></div>
+    <button class="pri" data-rwopen="">Open report writer</button>
+  </div>
   <div class="card">
     <b>How to work a call</b>
     <ul>
@@ -259,6 +281,7 @@ body.solo nav#tabs{display:none!important}
     <span class="sp"></span>
     <label class="stat" style="display:flex;align-items:center;gap:6px">Screen <select id="layout" style="width:auto;padding:3px 6px;font-size:12px">
       <option value="all">Everything</option><option value="pc">Phones + CAD</option><option value="phones">Phones</option><option value="cad">CAD</option><option value="leads">LEADS</option><option value="admin">Admin / court</option><option value="map">Map</option><option value="radio">Radio</option><option value="cr">CAD + Radio</option><option value="units">Unit board</option></select></label>
+    <button data-rwopen="" title="Report writer">📝 Reports</button>
     <button id="btnMon" title="Use more monitors">🖥🖥</button>
     <button id="btnPause">Pause</button>
     <button id="btnEnd" class="warn">End shift</button>
@@ -1343,7 +1366,7 @@ function openCite(id){
    <div class="row" style="margin-top:6px"><div><label class="f">OLN</label><input id="cOln"></div><div><label class="f">Plate</label><input id="cPlate"></div><div><label class="f">Offense date MMDDYYYY</label><input id="cDate" inputmode="numeric"></div></div>
    <div class="row" style="margin-top:6px"><div><label class="f">Charge (ORC)</label><select id="cOrc"><option value="">—</option>${ORC.map(o=>`<option value="${o[0]}">${esc(o[1])}</option>`).join('')}</select></div><div><label class="f">Court date MMDDYYYY</label><input id="cCdate" inputmode="numeric"></div></div>
   </div>
-  <div class="acts" style="margin-top:10px"><button onclick="closeModal()">Later</button><button class="go" onclick="submitCite('${c.id}')">Submit to court</button></div>`);
+  <div class="acts" style="margin-top:10px"><button onclick="closeModal()">Later</button><button data-rwcite="${esc(JSON.stringify({zk:c.zk,tno:c.tno,unit:c.unit,agency:c.agency,P:c.P,plate:c.plate,orc:c.orc,date:c.date,time:c.time,loc:c.loc,mph:c.mph,court:c.court,cdate:c.cdate}))}">📝 Ticket PDF</button><button class="go" onclick="submitCite('${c.id}')">Submit to court</button></div>`);
 }
 function submitCite(id){
   const c=S.cites.find(x=>x.id===id);if(!c||c.status!=='pend')return;const P=c.P,g=i=>($('#'+i).value||'').trim().toUpperCase(),dd=v=>v.replace(/\D/g,'');
@@ -1597,10 +1620,13 @@ function renderCad(){
     return `<tr class="p${i.pri} ${i.status==='pend'?'pend':''} ${i.status==='closed'?'closed':''}">
       <td>#${i.id}<br><span class="dim">${fmt(S.t-i.created)}</span></td><td>P${i.pri}</td><td><b>${i.nat}</b>${BSSA[i.nat]?` <span style="color:var(--cyan)">${bw(BSSA[i.nat])}</span>`:''}<br><span class="dim">${NAT[i.nat].d}</span></td>
       <td>${esc(i.loc)}<br><span class="dim">${z.n} · FD ${z.fd}</span></td><td>${us||'<span style="color:var(--red)">PENDING</span>'}</td>
-      <td>${(()=>{const p=premFor(i.loc);return p&&p.haz.length&&!i.haz&&i.status!=='closed'&&i.units.length?`<button class="warn" onclick="advisePrem(${i.id})">⚠ Advise hazard</button>`:''})()}<button data-focus="${i.id}" title="Show on map">📍</button>${i.status!=='closed'?`<button class="go" onclick="openAssign(${i.id})">Assign</button><button onclick="showInc(${i.id})">Notes</button><button onclick="closeInc(${i.id})">Close</button>`:`<button onclick="showInc(${i.id})">Notes</button>`}</td></tr>`;
+      <td>${(()=>{const p=premFor(i.loc);return p&&p.haz.length&&!i.haz&&i.status!=='closed'&&i.units.length?`<button class="warn" onclick="advisePrem(${i.id})">⚠ Advise hazard</button>`:''})()}<button data-focus="${i.id}" title="Show on map">📍</button>${['MVA','MVAI','TS','DOM','BURG','SUSP','ALARM','OD','WELF','HAZ','VF'].includes(i.nat)?`<button data-rwinc="${esc(JSON.stringify(rwIncData(i)))}" title="Write report">📝</button>`:''}${i.status!=='closed'?`<button class="go" onclick="openAssign(${i.id})">Assign</button><button onclick="showInc(${i.id})">Notes</button><button onclick="closeInc(${i.id})">Close</button>`:`<button onclick="showInc(${i.id})">Notes</button>`}</td></tr>`;
   }).join('');
   setHTML($('#cadInc'),rows?`<table><tr><th>INC</th><th>P</th><th>NATURE</th><th>LOCATION</th><th>UNITS</th><th></th></tr>${rows}</table>`:`<div class="dim" style="padding:20px;text-align:center">No incidents. Create one from an active call.</div>`);
 }
+function rwIncData(i){const u=i.units.map(id=>S.units.find(x=>x.id===id)).find(x=>x&&x.type==='LE');return{inc:{id:i.id,nat:i.nat,natD:NAT[i.nat].d,loc:i.loc,zk:i.zk,notes:i.notes},unit:u?{id:u.id,agency:u.agency}:null}}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-rwinc],[data-rwcite]');if(!b)return;e.preventDefault();e.stopPropagation();
+  const o=JSON.parse(b.dataset.rwinc||b.dataset.rwcite);if(b.dataset.rwinc)rwFromIncident(o.inc,o.unit);else{if(!$('#modal').classList.contains('hidden'))$('#modal').classList.add('hidden');rwFromCitation(o)}},true);
 function showInc(id){const i=S.incidents.find(x=>x.id===id);modal(`<h3>#${i.id} ${i.nat} — ${esc(i.loc)}</h3><div class="notes">${esc(i.notes||'(no narrative)')}</div><div class="dim mono" style="font-size:12px">Created ${fmt(i.created)} · First dispatch ${i.firstDisp!=null?fmt(i.firstDisp):'—'}${i.closedAt?' · Closed '+fmt(i.closedAt):''}</div><div class="acts" style="margin-top:10px"><button onclick="closeModal()">Close</button></div>`)}
 function renderRadio(){
   const tgList=['ALL','SO44DSP','FD44DISP','IRON FIRE','EMS44DSP','XSO-44'];
@@ -1881,5 +1907,6 @@ function endShift(){
   window.scrollTo(0,0);
 }
 </script>
+<script src="reports.js"></script>
 </body>
 </html>
