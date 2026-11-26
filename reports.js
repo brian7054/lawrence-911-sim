@@ -50,7 +50,7 @@ const SCHEMA={
    {t:'Narrative',f:[['narr','Narrative* — describe what happened, unit by unit','area']]},
    {t:'Diagram',f:[['diagram','Crash diagram (draw below)','sketch']]}
   ]},
- cite:{title:'Uniform Traffic Ticket',sub:'Training citation with the Ohio uniform ticket\'s fields',prefix:'TT',
+ cite:{title:'Uniform Traffic Ticket',sub:'Training citation ("OH-7") with the Ohio uniform ticket\'s fields',prefix:'TT',
   sections:[
    {t:'Ticket',f:[['tno','Ticket #*','text'],['agency','Agency*','select',AGENCIES],['officer','Officer*','text'],['badge','Badge / unit #*','text']]},
    {t:'Defendant',f:[['dname','Name (last, first, middle)*','text'],['ddob','Date of birth*','date'],['dsex','Sex','select',['M','F','U']],['daddr','Address*','text'],['dcity','City, state, ZIP','text'],
@@ -93,7 +93,7 @@ function ensureShell(){
   const el=document.createElement('div');el.id='rw';el.className='hidden';
   el.innerHTML=`<div class="rw-top"><b>📝 Report writer</b><span class="rw-badge">TRAINING — not an official record</span>
     <span style="flex:1"></span>
-    <button data-rwnew="crash">+ Crash report</button><button data-rwnew="cite">+ Citation</button><button data-rwnew="inc">+ Incident report</button><button id="rwSaved">Saved</button><button id="rwClose" class="warn">Close</button></div>
+    <button data-rwnew="crash">+ Crash report</button><button data-rwnew="cite">+ Citation (OH-7)</button><button data-rwnew="inc">+ Incident report</button><button id="rwSaved">Saved</button><button id="rwClose" class="warn">Close</button></div>
     <div id="rwBody"></div>`;
   document.body.appendChild(el);
   el.addEventListener('click',onClick);el.addEventListener('input',onInput);el.addEventListener('change',onInput);
